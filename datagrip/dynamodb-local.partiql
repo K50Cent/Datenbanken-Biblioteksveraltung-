@@ -1,0 +1,94 @@
+-- PartiQL-Beispiele fuer DataGrip / DynamoDB Local
+-- Tabellen:
+-- Books, Members, Loans, Reviews, Categories, Payments
+
+SELECT * FROM "Books";
+SELECT * FROM "Members";
+SELECT * FROM "Loans";
+SELECT * FROM "Reviews";
+SELECT * FROM "Categories";
+SELECT * FROM "Payments";
+
+SELECT * FROM "Books"
+WHERE "bookId" = 'BOOK_ID_HIER_EINFUEGEN';
+
+-- Suchen: Titel, Autor, ISBN oder Kategorie
+SELECT * FROM "Books"
+WHERE contains("title", 'Code')
+   OR contains("author", 'Martin')
+   OR contains("isbn", '978')
+   OR contains("category", 'Informatik');
+
+-- Buecher nach Bewertung sortieren
+SELECT * FROM "Books"
+ORDER BY "averageRating" DESC;
+
+-- Ausleihprozess ansehen
+SELECT * FROM "Loans"
+WHERE "status" = 'active';
+
+-- Ueberfaellige Ausleihen
+SELECT * FROM "Loans"
+WHERE "status" = 'overdue';
+
+-- Dokumentverknuepfung: Loan -> Book
+SELECT * FROM "Books"
+WHERE "bookId" = 'book-clean-code';
+
+-- Dokumentverknuepfung: Book -> Reviews
+SELECT * FROM "Reviews"
+WHERE "bookId" = 'book-clean-code';
+
+-- 4er-Kette als Beispiel:
+-- Member member-kjell -> Loan loan-001 -> Book book-clean-code -> Category cat-it
+SELECT * FROM "Members" WHERE "memberId" = 'member-kjell';
+SELECT * FROM "Loans" WHERE "loanId" = 'loan-001';
+SELECT * FROM "Books" WHERE "bookId" = 'book-clean-code';
+SELECT * FROM "Categories" WHERE "categoryId" = 'cat-it';
+
+-- Aggregation einer Kennzahl mit Filter:
+-- Durchschnittliche Bewertung aller Informatik-Buecher.
+SELECT AVG("averageRating") AS "avgInformatikRating"
+FROM "Books"
+WHERE "category" = 'Informatik';
+
+-- Aggregation: Anzahl ausgeliehener Buecher.
+SELECT COUNT(*) AS "borrowedBooks"
+FROM "Books"
+WHERE "available" = false;
+
+-- Aggregation: Summe aller Gebuehren.
+SELECT SUM("amount") AS "sumFees"
+FROM "Payments"
+WHERE "type" = 'fee';
+
+INSERT INTO "Books" VALUE {
+  'bookId': 'manual-test-book',
+  'title': 'Manuell angelegtes Buch',
+  'author': 'DataGrip',
+  'isbn': '000-0000000000',
+  'year': '2026',
+  'category': 'Test',
+  'categoryId': 'cat-it',
+  'available': true,
+  'borrowerName': '',
+  'borrowedAt': '',
+  'averageRating': 0,
+  'reviewIds': [],
+  'createdAt': '2026-04-22T00:00:00.000Z'
+};
+
+UPDATE "Books"
+SET "available" = false,
+    "borrowerName" = 'Kjell',
+    "borrowedAt" = '2026-04-22T00:00:00.000Z'
+WHERE "bookId" = 'manual-test-book';
+
+UPDATE "Books"
+SET "available" = true,
+    "borrowerName" = '',
+    "borrowedAt" = ''
+WHERE "bookId" = 'manual-test-book';
+
+DELETE FROM "Books"
+WHERE "bookId" = 'manual-test-book';

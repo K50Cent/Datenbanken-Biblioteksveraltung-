@@ -1,0 +1,45 @@
+{
+  "name": "untitled1",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "nodemon backend/server.js",
+    "dev:frontend": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node backend/server.js",
+    "create-tables": "node backend/createTables.cjs",
+    "seed": "node backend/seedData.cjs",
+    "demo-queries": "node backend/demoQueries.cjs",
+    "setup-db": "sh scripts/setup-local-db.sh",
+    "use-aws-db": "sh scripts/use-aws-db.sh",
+    "use-local-db": "sh scripts/use-local-db.sh",
+    "setup-aws-db": "sh scripts/setup-aws-db.sh"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1034.0",
+    "@aws-sdk/credential-providers": "^3.1035.0",
+    "@aws-sdk/lib-dynamodb": "^3.1034.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "vue": "^3.5.32"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14",
+    "vite": "^8.0.8",
+    "vite-plugin-vue-devtools": "^8.1.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "description": "This template should help get you started developing with Vue 3 in Vite.",
+  "main": "vite.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
