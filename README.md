@@ -4,7 +4,8 @@ Ein sehr einfacher Startpunkt fuer die Bibliotheksverwaltung:
 
 - DynamoDB-Verbindung in `backend/dynamodb.js`
 - kleine Login-API in `backend/server.js`
-- einfache HTML-Seite mit eingebettetem CSS in `public/index.html`
+- einfache Login-Seite in `public/index.html`
+- einfache Bibliotheksseite in `public/library.html`
 
 ## Lokal starten
 
@@ -22,6 +23,12 @@ Die Seite ist danach hier erreichbar:
 http://localhost:3000
 ```
 
+Nach der Anmeldung wird zur Bibliotheksseite weitergeleitet:
+
+```text
+http://localhost:3000/library.html
+```
+
 ## AWS starten
 
 ```bash
@@ -37,6 +44,9 @@ npm run dev
 Loginname: Admin
 Passwort: Admin
 ```
+
+Admin-Benutzer sehen den Admin-Bereich fuer Buecher anlegen, verwalten und loeschen.
+Normale Benutzer sehen nur die Ausleihe.
 
 ## Datenbank-Konfiguration
 

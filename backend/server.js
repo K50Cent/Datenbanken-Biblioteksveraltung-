@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { GetCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "./dynamodb.js";
 
 const app = express();
@@ -89,6 +89,60 @@ app.post("/api/auth/login", async (req, res) => {
     console.error("Login fehlgeschlagen:", error);
     return res.status(500).json({
       message: "Die Anmeldung konnte nicht mit der Datenbank geprueft werden.",
+    });
+  }
+});
+
+app.post("/api/auth/register", async (req, res) => {
+  const loginname = trimValue(req.body.loginname);
+  const password = trimValue(req.body.password);
+  const name = trimValue(req.body.name);
+  const vorname = trimValue(req.body.vorname);
+
+  if (loginname.length < 3) {
+    return res.status(400).json({ message: "Der Loginname muss mindestens 3 Zeichen lang sein." });
+  }
+
+  if (password.length < 4) {
+    return res.status(400).json({ message: "Das Passwort muss mindestens 4 Zeichen lang sein." });
+  }
+
+  if (!name || !vorname) {
+    return res.status(400).json({ message: "Bitte Vorname und Name eingeben." });
+  }
+
+  const user = {
+    usernameKey: usernameKey(loginname),
+    userId: crypto.randomUUID(),
+    username: loginname,
+    passwordHash: hashPassword(password),
+    name,
+    vorname,
+    role: "benutzer",
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: usersTable,
+        Item: user,
+        ConditionExpression: "attribute_not_exists(usernameKey)",
+      }),
+    );
+
+    return res.status(201).json({
+      user: toPublicUser(user),
+      token: signToken(user),
+    });
+  } catch (error) {
+    if (error.name === "ConditionalCheckFailedException") {
+      return res.status(409).json({ message: "Dieser Loginname ist schon vergeben." });
+    }
+
+    console.error("Registrierung fehlgeschlagen:", error);
+    return res.status(500).json({
+      message: "Die Registrierung konnte nicht in der Datenbank gespeichert werden.",
     });
   }
 });

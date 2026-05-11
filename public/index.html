@@ -14,7 +14,12 @@
   <body>
     <main>
       <h1>Bibliotheksverwaltung</h1>
-      <p>Bitte melde dich mit deinem Loginname und Passwort an.</p>
+      <p id="introText">Bitte melde dich mit deinem Loginname und Passwort an.</p>
+
+      <div class="auth-switch" aria-label="Anmeldung oder Registrierung">
+        <button id="showLogin" class="switch-button active" type="button">Anmelden</button>
+        <button id="showRegister" class="switch-button" type="button">Registrieren</button>
+      </div>
 
       <form id="loginForm">
         <label for="loginname">Loginname</label>
@@ -24,6 +29,22 @@
         <input id="password" name="password" type="password" autocomplete="current-password" required />
 
         <button id="submitButton" type="submit">Anmelden</button>
+      </form>
+
+      <form id="registerForm" hidden>
+        <label for="registerLoginname">Loginname</label>
+        <input id="registerLoginname" name="loginname" autocomplete="username" required />
+
+        <label for="vorname">Vorname</label>
+        <input id="vorname" name="vorname" autocomplete="given-name" required />
+
+        <label for="name">Name</label>
+        <input id="name" name="name" autocomplete="family-name" required />
+
+        <label for="registerPassword">Passwort</label>
+        <input id="registerPassword" name="password" type="password" autocomplete="new-password" required />
+
+        <button id="registerButton" type="submit">Account erstellen</button>
       </form>
 
       <div id="message" class="message"></div>
