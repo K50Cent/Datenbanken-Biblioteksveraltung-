@@ -1,109 +1,64 @@
 # Bibliotheksverwaltung
 
-Vue/Vite-Frontend mit Express-Backend und DynamoDB Local.
+Ein sehr einfacher Startpunkt fuer die Bibliotheksverwaltung:
 
-## Start in WebStorm
+- DynamoDB-Verbindung in `backend/dynamodb.js`
+- kleine Login-API in `backend/server.js`
+- einfache HTML-Seite mit eingebettetem CSS in `public/index.html`
 
-1. Docker Desktop starten.
-2. DynamoDB Local muss unter `http://localhost:8000` laufen.
-3. Im WebStorm-Terminal ausfuehren:
+## Lokal starten
 
 ```bash
-npm run setup-db
+npm run use-local-db
+npm run setup-users
 npm run dev
 ```
 
-Dann im Browser oeffnen:
+DynamoDB Local muss unter `http://localhost:8000` laufen.
+
+Die Seite ist danach hier erreichbar:
 
 ```text
-http://localhost:5173
+http://localhost:3000
 ```
 
-## Wichtige Scripts
+## AWS starten
 
 ```bash
-npm run dev            # Frontend und Backend zusammen starten
-npm run dev:frontend   # nur Vite-Frontend auf Port 5173
-npm run dev:backend    # nur Express-Backend auf Port 3000
-npm run create-tables  # DynamoDB-Tabellen erstellen
-npm run seed           # Testdaten einspielen
-npm run demo-queries   # Beispielabfragen ausfuehren
-npm run use-aws-db     # .env auf AWS DynamoDB Cloud umstellen
-npm run setup-aws-db   # AWS Tabellen erstellen und seed ausfuehren
-npm run use-local-db   # .env auf DynamoDB Local umstellen
-npm run build          # Frontend fuer Produktion bauen
-npm start              # Express-Backend mit gebautem Frontend starten
+npm run use-aws-db
+aws sts get-caller-identity --profile bibliothek
+npm run setup-users
+npm run dev
 ```
 
-## Anmeldung
-
-Admin-Zugang:
+## Test-Login
 
 ```text
-Benutzername: Admin
+Loginname: Admin
 Passwort: Admin
 ```
 
-Normale Benutzer koennen sich in der App registrieren. Sie duerfen danach nur
-ihre eigenen Buecher bearbeiten und loeschen. Der Admin darf alle Buecher
-bearbeiten und loeschen.
+## Datenbank-Konfiguration
 
-## Funktionen
-
-- Buecher anzeigen und suchen
-- Neues Buch ueber die eigene Ansicht `Buch anlegen` erstellen
-- Buchbild beim Anlegen oder Bearbeiten hochladen
-- Buecher ausleihen und zurueckgeben
-- Nach der Rueckgabe ein Buch mit 1 bis 5 Sternen bewerten
-- Normale Benutzer bearbeiten/loeschen nur eigene Buecher
-- Admin bearbeitet/loescht alle Buecher
-- Profil oben rechts oeffnen
-- Anzeigename im Profil aendern
-- Passwort im Profil aendern
-- Geld im Profil einzahlen und Guthaben anzeigen
-
-Seed-Testbenutzer:
-
-```text
-ramona / test123
-kjell / test123
-```
-
-## Datenbank
-
-Die Verbindung steht in `.env`:
+Die Verbindung liest `.env`:
 
 ```env
 PORT=3000
 AWS_REGION=eu-central-1
+USERS_TABLE=Users
+AUTH_SECRET=meine-lokale-secret-session
+```
+
+Lokal kommen zusaetzlich dazu:
+
+```env
 DYNAMODB_ENDPOINT=http://localhost:8000
 AWS_ACCESS_KEY_ID=dummy
 AWS_SECRET_ACCESS_KEY=dummy
 ```
 
-Fuer AWS DynamoDB Cloud siehe:
+AWS nutzt stattdessen:
 
-```text
-AWS_SETUP.md
-```
-
-Tabellen:
-
-```text
-Books
-Members
-Loans
-Reviews
-Categories
-Payments
-Users
-```
-
-## Projektstruktur
-
-```text
-backend/        Express API, DynamoDB-Verbindung, Setup- und Seed-Scripts
-src/            Vue-Frontend
-datagrip/       PartiQL-Beispiele fuer DataGrip
-scripts/        lokales Setup-Script
+```env
+AWS_PROFILE=bibliothek
 ```

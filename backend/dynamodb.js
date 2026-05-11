@@ -3,19 +3,7 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { fromIni } from "@aws-sdk/credential-providers";
 import dotenv from "dotenv";
 
-dotenv.config();
-
-export const tableNames = {
-  books: "Books",
-  members: "Members",
-  loans: "Loans",
-  reviews: "Reviews",
-  categories: "Categories",
-  payments: "Payments",
-  users: "Users",
-};
-
-export const tableName = tableNames.books;
+dotenv.config({ quiet: true });
 
 const clientConfig = {
   region: process.env.AWS_REGION || "eu-central-1",
