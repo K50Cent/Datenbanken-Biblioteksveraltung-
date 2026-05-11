@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <!--
+      Start:
+      npm run setup-users
+      npm run dev
+    -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bibliotheksverwaltung Anmeldung</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Bibliotheksverwaltung</h1>
+      <p>Bitte melde dich mit deinem Loginname und Passwort an.</p>
+
+      <form id="loginForm">
+        <label for="loginname">Loginname</label>
+        <input id="loginname" name="loginname" autocomplete="username" required />
+
+        <label for="password">Passwort</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+        <button id="submitButton" type="submit">Anmelden</button>
+      </form>
+
+      <div id="message" class="message"></div>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
