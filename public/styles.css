@@ -212,4 +212,23 @@ button:disabled {
   .button-row {
     grid-template-columns: 1fr;
   }
+
+}
+
+
+
+
+#books-list {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+.nav-box {
+  height: auto;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 10px 0;
 }

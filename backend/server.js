@@ -2,12 +2,13 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "./dynamodb.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
 const usersTable = process.env.USERS_TABLE || "Users";
+const booksTable = process.env.BOOKS_TABLE || "Books";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, "..", "public");
@@ -144,6 +145,51 @@ app.post("/api/auth/register", async (req, res) => {
     return res.status(500).json({
       message: "Die Registrierung konnte nicht in der Datenbank gespeichert werden.",
     });
+  }
+});
+
+app.post("/api/books", async (req, res) => {
+  const {title, isbn, year, category, author} = req.body;
+
+  if(!title || !isbn || !year) {
+    return res.status(400).json({message: "Titel, ISBN und Jahr sind Pflichtfelder"});
+  }
+
+  const book = {
+    bookId: crypto.randomUUID(), //uuid wird generiert
+    title,
+    isbn,
+    year,
+    category: category || "",
+    author: author || "",
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: booksTable,
+        Item: book,
+      })
+    );
+
+    return res.status(201).json({ message: "Buch erfolgreich gespeichert", book});
+  } catch (error) {
+    console.error("Fehler beim Speichern des Buches", error);
+    return res.status(500).json({ message: "buch konnte nicht gespeichert werden", error});
+  }
+
+});
+
+app.get("/api/books", async (_req, res) => {
+  try {
+    const result = await docClient.send(
+      new ScanCommand({TableName: booksTable,}) //liest alle Items aus Tabelle Books
+    );
+    return res.json(result.Items || []);
+  } catch (error) {
+    console.error("Fehler beim Laden der Bücher", error); //Fehleranzeige im Terminal
+    return res.status(500).json({message: "bücher konnten nicht geladen werden"}); //Fehleranzeige im Frontend
   }
 });
 
