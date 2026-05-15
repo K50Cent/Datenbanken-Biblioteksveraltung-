@@ -11,6 +11,16 @@
             <a href="/library.html" class="nav-link">Bücher</a>
             <a href="/me.html" class="nav-link">Mein Bereich</a>
         </nav>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Suchen" class="search-box"/>
+            <select id="categoryFilter" class="search-box">
+                <option value="">Alle Kategorien</option>
+            </select>
+            <button id="searchButton">Suchen</button>
+        </div>
+        
+
         <div id="books-list"></div>
 
     <script src="/library.js" defer></script>

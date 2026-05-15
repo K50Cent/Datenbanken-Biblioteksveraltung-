@@ -1,38 +1,66 @@
+let allBooks = [];
+let cathegorys = [];
 
 async function loadBooks() {
-  const list = document.getElementById("books-list");
-  try{
-    const response = await fetch("/api/books"); //ruft get routine auf (await wartet auf antwort) und wandelt in json um
-    const books = await response.json();
-    list.innerHTML = "";
-
-    if(!books.length) {
-      list.innerHTML = "keine Bücher gefunden";
-      return;
-    }
-
-    books.forEach((book) => { //für jedes buch wird ein div erzeugt und in books-list gehängt
-      const div = document.createElement("div");
-      div.className = "book-item";
-      div.innerHTML = `
-        <div class="book-title">${book.title}</div>
-        <div class="book-meta">
-          ISBN: ${book.isbn}<br>
-          Jahr: ${book.year}<br>
-          Kategorie: ${book.category || "-"}<br>
-          Autor: ${book.author || "-"}
-        </div>
-      `;
-      list.appendChild(div);
+  try {
+    const response = await fetch("/api/books");
+    allBooks = await response.json();
+    cathegorys = [...new Set(allBooks.map(book => book.category))];
+    const select = document.getElementById("categoryFilter");
+    select.innerHTML = '<option value="">Alle Kategorien</option>';
+    cathegorys.forEach(category => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category;
+      select.appendChild(option);
     });
+    renderBooks(allBooks);
   } catch (error) {
-    console.error("Fehler beim Laden der Bücher");
-    list.innerHTML = "Fehler beim Laden der Bücher";
+    document.getElementById("books-list").innerHTML = "Fehler beim Laden";
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => { //DOM stellt sicher, dass das script erst läuft, wenn html fertig geladen ist
-  if(window.location.pathname.endsWith("library.html")) {
-    loadBooks();
+function renderBooks(books) {
+  const list = document.getElementById("books-list");
+  list.innerHTML = "";
+
+  if (!books.length) {
+    list.innerHTML = "Keine Bücher gefunden";
+    return;
   }
+
+  books.forEach(book => {
+    const div = document.createElement("div");
+    div.className = "book-item";
+    div.innerHTML = `
+      <div class="book-title">${book.title}</div>
+      <div class="book-meta">
+        ISBN: ${book.isbn}<br>
+        Jahr: ${book.year}<br>
+        Kategorie: ${book.category || "-"}<br>
+        Autor: ${book.author || "-"}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", loadBooks);
+
+document.getElementById("searchButton").addEventListener("click", () => {
+  const query = document.getElementById("searchInput").value.toLowerCase();
+  const category = document.getElementById("categoryFilter").value;
+
+  const filtered = allBooks.filter(book => {
+    const matchSearch = 
+    book.title.toLowerCase().includes(query) ||
+    book.author.toLowerCase().includes(query) ||
+    book.category.toLowerCase().includes(query) ||
+    book.isbn.includes(query);
+
+    const matchCategory = category === "" || book.category === category;
+    return matchCategory && matchSearch;
+});
+
+  renderBooks(filtered);
 });

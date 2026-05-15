@@ -276,3 +276,29 @@ body.library-page {
   color: #555;
   line-height: 1.4;
 }
+
+/* Suchfeld */
+.search-box {
+  width: 260px;
+  height: 46px;
+  margin-top: 22px;
+  background-color: white;
+  border 2px solid #c7d0d9;
+  border-radius: 6px;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+#searchButton {
+ 
+  background: #237a57;
+  color: #fff;
+  cursor: pointer;
+  width: 100px;
+  height: 46px;
+}
