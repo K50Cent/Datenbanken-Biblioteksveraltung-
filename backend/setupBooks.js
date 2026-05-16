@@ -23,3 +23,26 @@ async function createBooksTable() { //asynchron, weil operationen von DynamoDB Z
 }
 
 createBooksTable();
+
+async function createAuthorsTable() {
+    const command = new CreateTableCommand({
+        TableName: "Authors",
+        AttributeDefinitions: [
+            {AttributeName: "authorID", AttributeType: "S"} //uuid von node, dynamodb hat keinen automatischen Zähler
+            //andere Attribute müssen nicht definiert werden, DBD ist schemalos
+        ],
+        KeySchema: [
+            { AttributeName: "authorID", KeyType: "HASH" }, //Partitionkey
+        ],
+        BillingMode: "PAY_PER_REQUEST", //zahlen nur für tatsächliche Lese-/Schreibzugriffe und keine Kapazitätsplanung
+    });
+
+    try {
+        await client.send(command); //befehl schicken und dann warten bis DBD antwortet
+        console.log("Author-Tabelle wurde erstellt");
+    } catch (error) {
+        console.error("Fehler beim Erstellen der Tabelle;", error);
+    }
+}
+
+createAuthorsTable();

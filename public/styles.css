@@ -283,7 +283,7 @@ body.library-page {
   height: 46px;
   margin-top: 22px;
   background-color: white;
-  border 2px solid #c7d0d9;
+  border: 2px solid #c7d0d9;
   border-radius: 6px;
 }
 

@@ -9,6 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const usersTable = process.env.USERS_TABLE || "Users";
 const booksTable = process.env.BOOKS_TABLE || "Books";
+const authorTable = process.env.AUTHOR_TABLE || "Authors";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, "..", "public");
@@ -192,6 +193,37 @@ app.get("/api/books", async (_req, res) => {
     return res.status(500).json({message: "bücher konnten nicht geladen werden"}); //Fehleranzeige im Frontend
   }
 });
+
+app.post("/api/author", async (req, res) => {
+  const {name, firstname} = req.body || {};
+
+  if(!name || !firstname) {
+    return res.status(400).json({message: "Name und Vorname sind Pflichtfelder"});
+  }
+
+  const author = {
+    authorID: crypto.randomUUID(), //uuid wird generiert
+    name,
+    firstname,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: authorTable,
+        Item: author,
+      })
+    );
+
+    return res.status(201).json({ message: "Author erfolgreich gespeichert", author});
+  } catch (error) {
+    console.error("Fehler beim Speichern des Authors", error);
+    return res.status(500).json({ message: "Author konnte nicht gespeichert werden", error});
+  }
+
+});
+
 
 app.listen(port, () => {
   console.log(`Bibliotheksverwaltung laeuft unter http://localhost:${port}`);
