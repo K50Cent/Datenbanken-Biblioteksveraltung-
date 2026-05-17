@@ -1,66 +1,28 @@
 <!doctype html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bibliotheksverwaltung</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body class="library-page">
-    <header class="page-header">
-      <div>
-        <h1>Bibliotheksverwaltung</h1>
-        <p id="welcomeText">Willkommen.</p>
-      </div>
-      <button id="logoutButton" class="small-button" type="button">Abmelden</button>
-    </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Bibliotheksverwaltung Übersicht</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body class="library-page">
+        <nav class="top-nav">
+            <a href="/library.html" class="nav-link">Bücher</a>
+            <a href="/me.html" class="nav-link">Mein Bereich</a>
+        </nav>
 
-    <main class="library-main">
-      <section class="toolbar" id="adminArea" hidden>
-        <h2>Admin-Bereich</h2>
-        <p>Buecher koennen spaeter hier angelegt, bearbeitet und geloescht werden.</p>
-        <div class="button-row">
-          <button type="button">Buch anlegen</button>
-          <button type="button">Buecher verwalten</button>
-          <button type="button">Buch loeschen</button>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Suchen" class="search-box"/>
+            <select id="categoryFilter" class="search-box">
+                <option value="">Alle Kategorien</option>
+            </select>
+            <button id="searchButton">Suchen</button>
         </div>
-      </section>
+        
 
-      <section class="toolbar" id="userArea" hidden>
-        <h2>Benutzer-Bereich</h2>
-        <p>Normale Benutzer koennen Buecher nur ausleihen.</p>
-      </section>
-
-      <section>
-        <h2>Buecher</h2>
-        <div class="book-list">
-          <article class="book-item">
-            <div>
-              <h3>Clean Code</h3>
-              <p>Robert C. Martin | Informatik | verfuegbar</p>
-            </div>
-            <button class="borrow-button" type="button">Ausleihen</button>
-          </article>
-
-          <article class="book-item">
-            <div>
-              <h3>NoSQL Datenbanken verstehen</h3>
-              <p>Martin Keller | Informatik | verfuegbar</p>
-            </div>
-            <button class="borrow-button" type="button">Ausleihen</button>
-          </article>
-
-          <article class="book-item">
-            <div>
-              <h3>Faust</h3>
-              <p>Johann Wolfgang von Goethe | Roman | verfuegbar</p>
-            </div>
-            <button class="borrow-button" type="button">Ausleihen</button>
-          </article>
-        </div>
-      </section>
-    </main>
+        <div id="books-list"></div>
 
     <script src="/library.js" defer></script>
-  </body>
+    </body>
 </html>

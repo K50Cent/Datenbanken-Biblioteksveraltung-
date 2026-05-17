@@ -212,4 +212,93 @@ button:disabled {
   .button-row {
     grid-template-columns: 1fr;
   }
+
+}
+
+
+
+/* Navigation */
+.top-nav {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #d8dee4;
+  padding: 20px 40px;
+  display: flex;
+  gap: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #1f2933;
+  font-weight: bold;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+/* Library Page */
+body.library-page {
+  display: block;
+  padding-top: 80px; 
+}
+
+/* Bücher nebeneinander anzeigen */
+#books-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+/* Buch-Karte */
+.book-item {
+  background: #ffffff;
+  border: 1px solid #d8dee4;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.book-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.book-meta {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* Suchfeld */
+.search-box {
+  width: 260px;
+  height: 46px;
+  margin-top: 22px;
+  background-color: white;
+  border: 2px solid #c7d0d9;
+  border-radius: 6px;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+#searchButton {
+ 
+  background: #237a57;
+  color: #fff;
+  cursor: pointer;
+  width: 100px;
+  height: 46px;
 }
