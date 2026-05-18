@@ -228,6 +228,10 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
+app.get("/api/auth/session", verifyToken, (req, res) => {
+  return res.json({ user: req.user });
+});
+
 // ─── Bücher ───────────────────────────────────────────────────────────────────
 
 app.get("/api/books", async (req, res) => {
@@ -255,6 +259,7 @@ app.get("/api/books", async (req, res) => {
       result = result.filter(
         (b) =>
           (b.title || "").toLowerCase().includes(q) ||
+          (b.author || "").toLowerCase().includes(q) ||
           b.authors.some(
             (a) =>
               (a.name || "").toLowerCase().includes(q) ||
@@ -264,7 +269,8 @@ app.get("/api/books", async (req, res) => {
     }
 
     if (author) {
-      result = result.filter((b) => b.authors.some((a) => a.authorId === author));
+      const selectedAuthor = String(author).toLowerCase();
+      result = result.filter((b) => (b.author || "").toLowerCase() === selectedAuthor);
     }
 
     return res.json(result);
@@ -624,166 +630,6 @@ app.post("/api/loans/:id/return", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Fehler beim Zurückgeben:", error);
     return res.status(500).json({ message: "Buch konnte nicht zurückgegeben werden." });
-  }
-});
-
-app.get("/api/loans/book/:bookId", async (req, res) => {
-  const { bookId } = req.params;
-
-  try {
-    const bookResult = await docClient.send(new GetCommand({ TableName: booksTable, Key: { bookId } }));
-    if (!bookResult.Item) {
-      return res.status(404).json({ message: "Buch nicht gefunden." });
-    }
-
-    const book = bookResult.Item;
-    const available = book.availableCopies > 0;
-
-    if (available) {
-      return res.json({ available: true, nextAvailable: null });
-    }
-
-    const loans = await queryAll(
-      loansTable,
-      "bookId-index",
-      "bookId = :bid",
-      { ":bid": bookId },
-    );
-
-    const activeLoans = loans.filter((l) => !l.returnedAt);
-    const nextAvailable =
-      activeLoans.length > 0
-        ? activeLoans.reduce((min, l) => (l.dueDate < min ? l.dueDate : min), activeLoans[0].dueDate)
-        : null;
-
-    return res.json({ available: false, nextAvailable });
-  } catch (error) {
-    console.error("Fehler beim Prüfen der Verfügbarkeit:", error);
-    return res.status(500).json({ message: "Verfügbarkeit konnte nicht geprüft werden." });
-  }
-});
-
-// ─── Admin ────────────────────────────────────────────────────────────────────
-
-app.get("/api/admin/loans", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const allLoans = await scanAll(loansTable);
-    const activeLoans = allLoans.filter((l) => !l.returnedAt);
-
-    const userIds = [...new Set(activeLoans.map((l) => l.userId))];
-    const bookIds = [...new Set(activeLoans.map((l) => l.bookId))];
-
-    const [allUsers, allBooks] = await Promise.all([
-      scanAll(usersTable),
-      scanAll(booksTable),
-    ]);
-
-    const userMap = {};
-    for (const u of allUsers) userMap[u.userId] = u;
-
-    const bookMap = {};
-    for (const b of allBooks) bookMap[b.bookId] = b;
-
-    const enriched = activeLoans.map((loan) => ({
-      loanId: loan.loanId,
-      userId: loan.userId,
-      username: userMap[loan.userId]?.username || "Unbekannt",
-      bookId: loan.bookId,
-      title: bookMap[loan.bookId]?.title || "Unbekanntes Buch",
-      borrowedAt: loan.borrowedAt,
-      dueDate: loan.dueDate,
-    }));
-
-    enriched.sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
-
-    return res.json(enriched);
-  } catch (error) {
-    console.error("Fehler beim Laden aller Ausleihen:", error);
-    return res.status(500).json({ message: "Ausleihen konnten nicht geladen werden." });
-  }
-});
-
-app.get("/api/admin/users", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const users = await scanAll(usersTable);
-    return res.json(users.map(toPublicUser));
-  } catch (error) {
-    console.error("Fehler beim Laden der Benutzer:", error);
-    return res.status(500).json({ message: "Benutzer konnten nicht geladen werden." });
-  }
-});
-
-app.get("/api/admin/stats", verifyToken, requireAdmin, async (req, res) => {
-  try {
-    const [books, loans, users] = await Promise.all([
-      scanAll(booksTable),
-      scanAll(loansTable),
-      scanAll(usersTable),
-    ]);
-
-    return res.json({
-      totalBooks: books.length,
-      totalLoans: loans.length,
-      activeLoans: loans.filter((l) => !l.returnedAt).length,
-      totalUsers: users.length,
-    });
-  } catch (error) {
-    console.error("Fehler beim Laden der Statistiken:", error);
-    return res.status(500).json({ message: "Statistiken konnten nicht geladen werden." });
-  }
-});
-
-// ─── Empfehlungen ─────────────────────────────────────────────────────────────
-
-app.get("/api/recommendations", verifyToken, async (req, res) => {
-  try {
-    const userLoans = await queryAll(
-      loansTable,
-      "userId-index",
-      "userId = :uid",
-      { ":uid": req.user.userId },
-    );
-
-    if (!userLoans.length) {
-      return res.json([]);
-    }
-
-    const borrowedBookIds = [...new Set(userLoans.map((l) => l.bookId))];
-
-    const borrowedBooks = await Promise.all(
-      borrowedBookIds.map((bookId) =>
-        docClient.send(new GetCommand({ TableName: booksTable, Key: { bookId } })),
-      ),
-    );
-
-    const categoryIds = [
-      ...new Set(borrowedBooks.map((r) => r.Item?.categoryId).filter(Boolean)),
-    ];
-
-    if (!categoryIds.length) {
-      return res.json([]);
-    }
-
-    const booksByCategory = await Promise.all(
-      categoryIds.map((catId) =>
-        queryAll(booksTable, "categoryId-index", "categoryId = :catId", { ":catId": catId }),
-      ),
-    );
-
-    const allCandidates = booksByCategory.flat();
-    const seen = new Set();
-    const unique = allCandidates.filter((b) => {
-      if (seen.has(b.bookId) || borrowedBookIds.includes(b.bookId)) return false;
-      seen.add(b.bookId);
-      return true;
-    });
-
-    const enriched = await enrichBooksWithAuthorsAndAvailability(unique.slice(0, 12));
-
-    return res.json(enriched.slice(0, 6));
-  } catch (error) {
-    console.error("Fehler beim Laden der Empfehlungen:", error);
-    return res.status(500).json({ message: "Empfehlungen konnten nicht geladen werden." });
   }
 });
 

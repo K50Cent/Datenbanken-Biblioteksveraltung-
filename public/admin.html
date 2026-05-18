@@ -3,114 +3,76 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin – Bibliotheksverwaltung</title>
+    <title>Admin - Bibliotheksverwaltung</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="app-page">
     <nav class="navbar">
-      <div class="navbar-brand">
-        Bibliotheksverwaltung
-        <span class="badge-admin">Admin</span>
-      </div>
-      <div class="navbar-links">
-        <a href="/library.html" class="nav-link">Zur Bücherei</a>
-      </div>
+      <div class="navbar-brand">Bibliotheksverwaltung - Admin</div>
       <div class="navbar-user">
         <span id="navUserName"></span>
+        <a href="/library.html" class="btn btn-outline btn-sm">Zur Buecherei</a>
         <button class="btn btn-outline btn-sm" id="logoutBtn">Abmelden</button>
       </div>
     </nav>
 
-    <div class="container">
+    <main class="container">
+      <section class="card">
+        <h1>Buecher verwalten</h1>
+        <p>Hier kann die Bibliothek Buecher anlegen, bearbeiten und loeschen.</p>
 
-      <!-- Statistiken -->
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card"><div class="stat-value" id="statBooks">–</div><div class="stat-label">Bücher gesamt</div></div>
-        <div class="stat-card"><div class="stat-value" id="statLoans">–</div><div class="stat-label">Ausleihen gesamt</div></div>
-        <div class="stat-card"><div class="stat-value" id="statActive">–</div><div class="stat-label">Aktive Ausleihen</div></div>
-        <div class="stat-card"><div class="stat-value" id="statUsers">–</div><div class="stat-label">Benutzer</div></div>
-      </div>
+        <form id="bookFormEl">
+          <input type="hidden" id="editBookId" />
 
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="loans">
-          Alle Ausleihen
-          <span class="badge" id="loansCountBadge" hidden></span>
-        </button>
-        <button class="tab-btn" data-tab="users">Mitglieder</button>
-        <button class="tab-btn" data-tab="books">Bücher verwalten</button>
-      </div>
+          <div class="form-group">
+            <label for="bookTitle">Titel *</label>
+            <input type="text" id="bookTitle" required />
+          </div>
 
-      <!-- Tab 1: Alle Ausleihen -->
-      <div id="tab-loans" class="tab-content active" style="display:block">
-        <div id="loansTableContainer"><p>Ausleihen werden geladen …</p></div>
-      </div>
-
-      <!-- Tab 2: Mitglieder -->
-      <div id="tab-users" class="tab-content" style="display:none">
-        <div id="usersTableContainer"><p>Benutzer werden geladen …</p></div>
-      </div>
-
-      <!-- Tab 3: Bücher verwalten -->
-      <div id="tab-books" class="tab-content" style="display:none">
-
-        <div class="section-header">
-          <h2>Bücher verwalten</h2>
-          <button class="btn btn-primary" id="newBookBtn">+ Neues Buch</button>
-        </div>
-
-        <!-- Buchformular (standardmäßig versteckt) -->
-        <div id="bookFormCard" class="card" hidden>
-          <h3 id="bookFormTitle">Neues Buch anlegen</h3>
-          <form id="bookFormEl">
-            <input type="hidden" id="editBookId" />
-
+          <div class="form-row">
             <div class="form-group">
-              <label for="bookTitle">Titel *</label>
-              <input type="text" id="bookTitle" required />
+              <label for="bookIsbn">ISBN *</label>
+              <input type="text" id="bookIsbn" required />
             </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="bookIsbn">ISBN *</label>
-                <input type="text" id="bookIsbn" required />
-              </div>
-              <div class="form-group">
-                <label for="bookYear">Erscheinungsjahr *</label>
-                <input type="number" id="bookYear" min="1000" max="2100" required />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="bookCategory">Kategorie</label>
-                <select id="bookCategory">
-                  <option value="">– keine –</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="bookCopies">Anzahl Exemplare</label>
-                <input type="number" id="bookCopies" value="1" min="1" />
-              </div>
-            </div>
-
             <div class="form-group">
-              <label for="bookAuthors">Autoren</label>
-              <select id="bookAuthors" multiple size="5"></select>
-              <small>Mehrere Autoren: Strg+Klick (Mac: Cmd+Klick)</small>
+              <label for="bookYear">Erscheinungsjahr *</label>
+              <input type="number" id="bookYear" min="1000" max="2100" required />
             </div>
+          </div>
 
-            <div id="bookFormMessage" class="message" hidden></div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary" id="bookFormSubmitBtn">Speichern</button>
-              <button type="button" class="btn btn-outline" id="cancelBookBtn">Abbrechen</button>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bookCategory">Kategorie</label>
+              <select id="bookCategory">
+                <option value="">Keine Kategorie</option>
+              </select>
             </div>
-          </form>
-        </div>
+            <div class="form-group">
+              <label for="bookCopies">Anzahl Exemplare</label>
+              <input type="number" id="bookCopies" value="1" min="1" />
+            </div>
+          </div>
 
-        <div id="booksTableContainer"><p>Bücher werden geladen …</p></div>
-      </div>
-    </div>
+          <div class="form-group">
+            <label for="bookAuthors">Autoren</label>
+            <select id="bookAuthors" multiple size="4"></select>
+            <small>Mehrere Autoren mit Strg oder Cmd auswaehlen.</small>
+          </div>
+
+          <div id="bookFormMessage" class="message" hidden></div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="bookFormSubmitBtn">Buch speichern</button>
+            <button type="button" class="btn btn-outline" id="clearBookBtn">Formular leeren</button>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <h2>Vorhandene Buecher</h2>
+        <div id="booksTableContainer"><p>Buecher werden geladen ...</p></div>
+      </section>
+    </main>
 
     <script src="/admin.js" defer></script>
   </body>

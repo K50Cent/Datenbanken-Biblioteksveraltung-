@@ -1,4 +1,3 @@
-// ── Auth-Prüfung (Admin) ──────────────────────────────────────────────────────
 const token = localStorage.getItem("libraryToken");
 const currentUser = JSON.parse(localStorage.getItem("libraryUser") || "null");
 
@@ -8,64 +7,14 @@ if (!token || !currentUser) {
   window.location.href = "/library.html";
 }
 
-// ── API-Helper ────────────────────────────────────────────────────────────────
-async function apiFetch(url, options = {}) {
-  const headers = { "Content-Type": "application/json", ...options.headers };
-  headers.Authorization = `Bearer ${token}`;
+let books = [];
+let categories = [];
+let authors = [];
 
-  const res = await fetch(url, { ...options, headers });
+const messageEl = document.getElementById("bookFormMessage");
+const formEl = document.getElementById("bookFormEl");
 
-  if (res.status === 401) {
-    localStorage.removeItem("libraryToken");
-    localStorage.removeItem("libraryUser");
-    window.location.href = "/index.html";
-    return null;
-  }
-  return res;
-}
-
-// ── Datums-Formatierung ───────────────────────────────────────────────────────
-function formatDate(iso) {
-  if (!iso) return "-";
-  return new Date(iso).toLocaleDateString("de-DE", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
-}
-
-function isOverdue(dueDateIso) {
-  return new Date(dueDateIso) < new Date();
-}
-
-// ── HTML-Escaping ─────────────────────────────────────────────────────────────
-function esc(str) {
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
-function showToast(text, type = "info") {
-  let c = document.getElementById("toastContainer");
-  if (!c) {
-    c = document.createElement("div");
-    c.id = "toastContainer";
-    c.style.cssText =
-      "position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;";
-    document.body.appendChild(c);
-  }
-  const toast = document.createElement("div");
-  toast.className = `message message-${type === "success" ? "success" : type === "error" ? "error" : "info"}`;
-  toast.style.cssText = "min-width:260px;max-width:400px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,.15);";
-  toast.textContent = text;
-  c.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-document.getElementById("navUserName").textContent =
-  `${currentUser.vorname} ${currentUser.name}`;
+document.getElementById("navUserName").textContent = `${currentUser.vorname} ${currentUser.name}`;
 
 document.getElementById("logoutBtn").addEventListener("click", () => {
   localStorage.removeItem("libraryToken");
@@ -73,316 +22,190 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   window.location.href = "/index.html";
 });
 
-// ── Tab-Steuerung ─────────────────────────────────────────────────────────────
-document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach((c) => {
-      c.classList.remove("active");
-      c.style.display = "none";
-    });
-    btn.classList.add("active");
-    const content = document.getElementById(`tab-${tab}`);
-    content.classList.add("active");
-    content.style.display = "block";
+document.getElementById("clearBookBtn").addEventListener("click", resetForm);
 
-    if (tab === "users") loadUsers();
-    if (tab === "books") loadAdminBooks();
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
   });
-});
 
-// ── Statistiken ───────────────────────────────────────────────────────────────
-async function loadStats() {
-  try {
-    const res = await apiFetch("/api/admin/stats");
-    if (!res) return;
-    const stats = await res.json();
-    document.getElementById("statBooks").textContent = stats.totalBooks ?? "–";
-    document.getElementById("statLoans").textContent = stats.totalLoans ?? "–";
-    document.getElementById("statActive").textContent = stats.activeLoans ?? "–";
-    document.getElementById("statUsers").textContent = stats.totalUsers ?? "–";
-  } catch {
-    // Statistiken nicht kritisch
+  if (res.status === 401) {
+    localStorage.removeItem("libraryToken");
+    localStorage.removeItem("libraryUser");
+    window.location.href = "/index.html";
+    return null;
   }
+
+  return res;
 }
 
-// ── Tab 1: Alle Ausleihen ─────────────────────────────────────────────────────
-async function loadAllLoans() {
-  const container = document.getElementById("loansTableContainer");
-  container.innerHTML = "<p>Ausleihen werden geladen …</p>";
-
-  try {
-    const res = await apiFetch("/api/admin/loans");
-    if (!res) return;
-    const loans = await res.json();
-
-    const badge = document.getElementById("loansCountBadge");
-    if (loans.length > 0) {
-      badge.textContent = loans.length;
-      badge.hidden = false;
-    }
-
-    if (!loans.length) {
-      container.innerHTML =
-        '<div class="empty-state"><h3>Keine aktiven Ausleihen</h3><p>Momentan sind keine Bücher ausgeliehen.</p></div>';
-      return;
-    }
-
-    const rows = loans.map((loan) => {
-      const overdue = isOverdue(loan.dueDate);
-      const rowClass = overdue ? "row-overdue" : "";
-      const dueText = overdue
-        ? `<strong style="color:var(--red-700)">⚠ ${formatDate(loan.dueDate)}</strong>`
-        : formatDate(loan.dueDate);
-      return `
-        <tr class="${rowClass}">
-          <td>${esc(loan.username)}</td>
-          <td>${esc(loan.title)}</td>
-          <td>${formatDate(loan.borrowedAt)}</td>
-          <td>${dueText}</td>
-        </tr>`;
-    }).join("");
-
-    container.innerHTML = `
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Benutzer</th>
-              <th>Buch</th>
-              <th>Ausgeliehen am</th>
-              <th>Fällig am</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  } catch {
-    container.innerHTML =
-      '<div class="empty-state"><h3>Fehler</h3><p>Ausleihen konnten nicht geladen werden.</p></div>';
-  }
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-// ── Tab 2: Mitglieder ─────────────────────────────────────────────────────────
-async function loadUsers() {
-  const container = document.getElementById("usersTableContainer");
-  container.innerHTML = "<p>Benutzer werden geladen …</p>";
-
-  try {
-    const res = await apiFetch("/api/admin/users");
-    if (!res) return;
-    const users = await res.json();
-
-    if (!users.length) {
-      container.innerHTML =
-        '<div class="empty-state"><h3>Keine Benutzer gefunden</h3></div>';
-      return;
-    }
-
-    const rows = users.map((u) => `
-      <tr>
-        <td>${esc(u.loginname)}</td>
-        <td>${esc(u.name)}</td>
-        <td>${esc(u.vorname)}</td>
-        <td>
-          <span class="avail-badge ${u.role === "admin" ? "unavailable" : "available"}">
-            ${esc(u.role)}
-          </span>
-        </td>
-        <td>${formatDate(u.createdAt)}</td>
-      </tr>`).join("");
-
-    container.innerHTML = `
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Loginname</th>
-              <th>Name</th>
-              <th>Vorname</th>
-              <th>Rolle</th>
-              <th>Erstellt am</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  } catch {
-    container.innerHTML =
-      '<div class="empty-state"><h3>Fehler</h3><p>Benutzer konnten nicht geladen werden.</p></div>';
-  }
+function showMessage(text, type = "info") {
+  messageEl.textContent = text;
+  messageEl.className = `message message-${type}`;
+  messageEl.hidden = false;
 }
 
-// ── Tab 3: Bücher verwalten ───────────────────────────────────────────────────
-let adminCategories = [];
-let adminAuthors = [];
+function resetForm() {
+  formEl.reset();
+  document.getElementById("editBookId").value = "";
+  document.getElementById("bookCopies").value = 1;
+  messageEl.hidden = true;
+}
 
-async function loadAdminBooks() {
+function fillSelects() {
+  const categorySelect = document.getElementById("bookCategory");
+  categorySelect.innerHTML = '<option value="">Keine Kategorie</option>';
+
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category.categoryId;
+    option.textContent = category.name;
+    categorySelect.appendChild(option);
+  });
+
+  const authorSelect = document.getElementById("bookAuthors");
+  authorSelect.innerHTML = "";
+
+  authors.forEach((author) => {
+    const option = document.createElement("option");
+    option.value = author.authorID || author.authorId;
+    option.textContent = `${author.firstname || ""} ${author.name || ""}`.trim();
+    authorSelect.appendChild(option);
+  });
+}
+
+function getCategoryName(categoryId) {
+  return categories.find((category) => category.categoryId === categoryId)?.name || "-";
+}
+
+function getAuthorText(book) {
+  if (book.authors?.length) {
+    return book.authors.map((author) => `${author.firstname || ""} ${author.name || ""}`.trim()).join(", ");
+  }
+
+  return book.author || "-";
+}
+
+async function loadData() {
   const container = document.getElementById("booksTableContainer");
-  container.innerHTML = "<p>Bücher werden geladen …</p>";
+  container.innerHTML = "<p>Buecher werden geladen ...</p>";
 
   try {
-    const [booksRes, catsRes, authsRes] = await Promise.all([
+    const [booksRes, categoriesRes, authorsRes] = await Promise.all([
       apiFetch("/api/books"),
       apiFetch("/api/categories"),
       apiFetch("/api/authors"),
     ]);
-    if (!booksRes || !catsRes || !authsRes) return;
 
-    const [books, cats, authors] = await Promise.all([
-      booksRes.json(),
-      catsRes.json(),
-      authsRes.json(),
-    ]);
+    if (!booksRes || !categoriesRes || !authorsRes) return;
 
-    adminCategories = cats;
-    adminAuthors = authors;
+    books = await booksRes.json();
+    categories = await categoriesRes.json();
+    authors = await authorsRes.json();
 
-    populateFormDropdowns();
-
-    if (!books.length) {
-      container.innerHTML =
-        '<div class="empty-state"><h3>Keine Bücher vorhanden</h3><p>Lege das erste Buch an.</p></div>';
-      return;
-    }
-
-    const catMap = {};
-    cats.forEach((c) => { catMap[c.categoryId] = c.name; });
-
-    const rows = books.map((book) => {
-      const authorNames = book.authors?.length
-        ? book.authors.map((a) => `${a.firstname} ${a.name}`).join(", ")
-        : (book.author || "-");
-      const catName = catMap[book.categoryId] || "-";
-      return `
-        <tr>
-          <td>${esc(book.title)}</td>
-          <td>${esc(book.isbn || "-")}</td>
-          <td>${book.year || "-"}</td>
-          <td>${esc(catName)}</td>
-          <td>${esc(authorNames)}</td>
-          <td>${book.availableCopies ?? "-"} / ${book.totalCopies ?? "-"}</td>
-          <td>
-            <div class="td-actions">
-              <button class="btn btn-outline btn-sm edit-book-btn"
-                data-book-id="${book.bookId}">Bearbeiten</button>
-              <button class="btn btn-danger btn-sm delete-book-btn"
-                data-book-id="${book.bookId}"
-                data-title="${esc(book.title)}">Löschen</button>
-            </div>
-          </td>
-        </tr>`;
-    }).join("");
-
-    container.innerHTML = `
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Titel</th>
-              <th>ISBN</th>
-              <th>Jahr</th>
-              <th>Kategorie</th>
-              <th>Autoren</th>
-              <th>Verfügbar</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-
-    container.querySelectorAll(".edit-book-btn").forEach((btn) => {
-      btn.addEventListener("click", () => openEditBook(btn.dataset.bookId, books));
-    });
-    container.querySelectorAll(".delete-book-btn").forEach((btn) => {
-      btn.addEventListener("click", () => deleteBook(btn.dataset.bookId, btn.dataset.title));
-    });
+    fillSelects();
+    renderBooks();
   } catch {
-    container.innerHTML =
-      '<div class="empty-state"><h3>Fehler</h3><p>Bücher konnten nicht geladen werden.</p></div>';
+    container.innerHTML = '<p class="message message-error">Buecher konnten nicht geladen werden.</p>';
   }
 }
 
-function populateFormDropdowns() {
-  const catSelect = document.getElementById("bookCategory");
-  catSelect.innerHTML = '<option value="">– keine –</option>';
-  adminCategories.forEach((c) => {
-    const opt = document.createElement("option");
-    opt.value = c.categoryId;
-    opt.textContent = c.name;
-    catSelect.appendChild(opt);
+function renderBooks() {
+  const container = document.getElementById("booksTableContainer");
+
+  if (!books.length) {
+    container.innerHTML = "<p>Noch keine Buecher vorhanden.</p>";
+    return;
+  }
+
+  const rows = books.map((book) => `
+    <tr>
+      <td>${esc(book.title)}</td>
+      <td>${esc(book.isbn || "-")}</td>
+      <td>${esc(book.year || "-")}</td>
+      <td>${esc(getCategoryName(book.categoryId))}</td>
+      <td>${esc(getAuthorText(book))}</td>
+      <td>${esc(book.availableCopies ?? "-")} / ${esc(book.totalCopies ?? "-")}</td>
+      <td>
+        <button class="btn btn-outline btn-sm edit-book-btn" data-id="${esc(book.bookId)}">Bearbeiten</button>
+        <button class="btn btn-danger btn-sm delete-book-btn" data-id="${esc(book.bookId)}" data-title="${esc(book.title)}">Loeschen</button>
+      </td>
+    </tr>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Titel</th>
+            <th>ISBN</th>
+            <th>Jahr</th>
+            <th>Kategorie</th>
+            <th>Autoren</th>
+            <th>Exemplare</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+
+  container.querySelectorAll(".edit-book-btn").forEach((button) => {
+    button.addEventListener("click", () => editBook(button.dataset.id));
   });
 
-  const authSelect = document.getElementById("bookAuthors");
-  authSelect.innerHTML = "";
-  adminAuthors.forEach((a) => {
-    const opt = document.createElement("option");
-    opt.value = a.authorId;
-    opt.textContent = `${a.firstname} ${a.name}`;
-    authSelect.appendChild(opt);
+  container.querySelectorAll(".delete-book-btn").forEach((button) => {
+    button.addEventListener("click", () => deleteBook(button.dataset.id, button.dataset.title));
   });
 }
 
-// ── Buchformular öffnen (neu) ─────────────────────────────────────────────────
-document.getElementById("newBookBtn").addEventListener("click", () => {
-  document.getElementById("bookFormTitle").textContent = "Neues Buch anlegen";
-  document.getElementById("editBookId").value = "";
-  document.getElementById("bookFormEl").reset();
-  document.getElementById("bookFormMessage").hidden = true;
-  document.getElementById("bookFormCard").hidden = false;
-  document.getElementById("bookFormCard").scrollIntoView({ behavior: "smooth" });
-});
-
-document.getElementById("cancelBookBtn").addEventListener("click", () => {
-  document.getElementById("bookFormCard").hidden = true;
-});
-
-// ── Buchformular öffnen (bearbeiten) ─────────────────────────────────────────
-function openEditBook(bookId, books) {
-  const book = books.find((b) => b.bookId === bookId);
+function editBook(bookId) {
+  const book = books.find((entry) => entry.bookId === bookId);
   if (!book) return;
 
-  document.getElementById("bookFormTitle").textContent = "Buch bearbeiten";
   document.getElementById("editBookId").value = book.bookId;
   document.getElementById("bookTitle").value = book.title || "";
   document.getElementById("bookIsbn").value = book.isbn || "";
   document.getElementById("bookYear").value = book.year || "";
-  document.getElementById("bookCopies").value = book.totalCopies ?? book.availableCopies ?? 1;
-  document.getElementById("bookFormMessage").hidden = true;
+  document.getElementById("bookCategory").value = book.categoryId || "";
+  document.getElementById("bookCopies").value = book.totalCopies || book.availableCopies || 1;
 
-  const catSelect = document.getElementById("bookCategory");
-  catSelect.value = book.categoryId || "";
-
-  const authSelect = document.getElementById("bookAuthors");
-  const selectedAuthorIds = book.authors?.map((a) => a.authorId) || [];
-  Array.from(authSelect.options).forEach((opt) => {
-    opt.selected = selectedAuthorIds.includes(opt.value);
+  const selectedAuthorIds = book.authors?.map((author) => author.authorId) || [];
+  Array.from(document.getElementById("bookAuthors").options).forEach((option) => {
+    option.selected = selectedAuthorIds.includes(option.value);
   });
 
-  document.getElementById("bookFormCard").hidden = false;
-  document.getElementById("bookFormCard").scrollIntoView({ behavior: "smooth" });
+  showMessage("Buch wird bearbeitet. Nach der Aenderung speichern.", "info");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ── Buchformular absenden ─────────────────────────────────────────────────────
-document.getElementById("bookFormEl").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const submitBtn = document.getElementById("bookFormSubmitBtn");
-  const msgEl = document.getElementById("bookFormMessage");
-  submitBtn.disabled = true;
-  msgEl.hidden = true;
+formEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
   const bookId = document.getElementById("editBookId").value;
-  const authSelect = document.getElementById("bookAuthors");
-  const authorIds = Array.from(authSelect.selectedOptions).map((o) => o.value);
-
-  const copies = parseInt(document.getElementById("bookCopies").value, 10) || 1;
+  const authorIds = Array.from(document.getElementById("bookAuthors").selectedOptions).map((option) => option.value);
+  const copies = Number(document.getElementById("bookCopies").value) || 1;
 
   const payload = {
     title: document.getElementById("bookTitle").value.trim(),
     isbn: document.getElementById("bookIsbn").value.trim(),
-    year: parseInt(document.getElementById("bookYear").value, 10),
+    year: Number(document.getElementById("bookYear").value),
     categoryId: document.getElementById("bookCategory").value,
     authorIds,
     availableCopies: copies,
@@ -395,53 +218,39 @@ document.getElementById("bookFormEl").addEventListener("submit", async (e) => {
   try {
     const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
     if (!res) return;
-    const data = await res.json();
 
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      msgEl.textContent = data.message || "Fehler beim Speichern.";
-      msgEl.className = "message message-error";
-      msgEl.hidden = false;
+      showMessage(data.message || "Buch konnte nicht gespeichert werden.", "error");
       return;
     }
 
-    document.getElementById("bookFormCard").hidden = true;
-    document.getElementById("bookFormEl").reset();
-    showToast(bookId ? "Buch erfolgreich aktualisiert." : "Buch erfolgreich angelegt.", "success");
-    loadAdminBooks();
-    loadStats();
+    resetForm();
+    showMessage(bookId ? "Buch wurde aktualisiert." : "Buch wurde angelegt.", "success");
+    await loadData();
   } catch {
-    msgEl.textContent = "Verbindungsfehler. Bitte erneut versuchen.";
-    msgEl.className = "message message-error";
-    msgEl.hidden = false;
-  } finally {
-    submitBtn.disabled = false;
+    showMessage("Verbindungsfehler. Bitte erneut versuchen.", "error");
   }
 });
 
-// ── Buch löschen ──────────────────────────────────────────────────────────────
 async function deleteBook(bookId, title) {
-  if (!confirm(`Buch „${title}" wirklich löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.`)) {
-    return;
-  }
+  if (!confirm(`Buch "${title}" wirklich loeschen?`)) return;
 
   try {
     const res = await apiFetch(`/api/books/${bookId}`, { method: "DELETE" });
     if (!res) return;
-    const data = await res.json();
 
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      showToast(data.message || "Löschen fehlgeschlagen.", "error");
+      showMessage(data.message || "Buch konnte nicht geloescht werden.", "error");
       return;
     }
 
-    showToast(`„${title}" wurde gelöscht.`, "success");
-    loadAdminBooks();
-    loadStats();
+    showMessage("Buch wurde geloescht.", "success");
+    await loadData();
   } catch {
-    showToast("Löschen konnte nicht durchgeführt werden.", "error");
+    showMessage("Loeschen konnte nicht durchgefuehrt werden.", "error");
   }
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-loadStats();
-loadAllLoans();
+loadData();

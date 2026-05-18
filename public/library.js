@@ -37,6 +37,8 @@ function isOverdue(dueDateIso) {
 // ── Zustand ───────────────────────────────────────────────────────────────────
 let allBooks = [];
 let allCategories = [];
+let allAuthors = [];
+let myLoans = [];
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.getElementById("navUserName").textContent =
@@ -69,7 +71,6 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
     content.style.display = "block";
 
     if (tab === "loans") loadMyLoans();
-    if (tab === "recommendations") loadRecommendations();
   });
 });
 
@@ -98,6 +99,26 @@ async function loadCategories() {
   }
 }
 
+async function loadAuthors() {
+  try {
+    const res = await apiFetch("/api/authors");
+    if (!res) return;
+    allAuthors = await res.json();
+
+    const select = document.getElementById("authorFilter");
+    select.innerHTML = '<option value="">Alle Autoren</option>';
+    allAuthors.forEach((author) => {
+      const fullName = `${author.firstname || ""} ${author.name || ""}`.trim();
+      const opt = document.createElement("option");
+      opt.value = fullName;
+      opt.textContent = fullName;
+      select.appendChild(opt);
+    });
+  } catch {
+    // Autorenfilter ist nicht kritisch
+  }
+}
+
 function getCategoryName(categoryId) {
   const cat = allCategories.find((c) => c.categoryId === categoryId);
   return cat ? cat.name : categoryId || "-";
@@ -108,6 +129,8 @@ async function loadBooks(search = "", category = "") {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category) params.set("category", category);
+  const author = document.getElementById("authorFilter").value;
+  if (author) params.set("author", author);
 
   const container = document.getElementById("booksList");
   container.innerHTML = '<div class="empty-state"><p>Bücher werden geladen …</p></div>';
@@ -160,18 +183,18 @@ function bookCardHTML(book) {
 
   return `
     <div class="book-card">
-      <div class="book-card-title">${escHtml(book.title)}</div>
+      <div class="book-card-title">${esc(book.title)}</div>
       <div class="book-card-meta">
-        <strong>Autor:</strong> ${escHtml(authorNames)}<br>
-        <strong>Kategorie:</strong> ${escHtml(categoryName)}<br>
-        <strong>ISBN:</strong> ${escHtml(book.isbn || "-")}&ensp;
+        <strong>Autor:</strong> ${esc(authorNames)}<br>
+        <strong>Kategorie:</strong> ${esc(categoryName)}<br>
+        <strong>ISBN:</strong> ${esc(book.isbn || "-")}&ensp;
         <strong>Jahr:</strong> ${book.year || "-"}
       </div>
       <div class="book-card-footer">
         ${badgeHTML}
         <button class="btn btn-primary btn-sm borrow-btn"
           data-book-id="${book.bookId}"
-          data-title="${escAttr(book.title)}"
+          data-title="${esc(book.title)}"
           ${borrowDisabled}>
           Ausleihen
         </button>
@@ -214,28 +237,39 @@ async function loadMyLoans() {
   try {
     const res = await apiFetch("/api/loans/my");
     if (!res) return;
-    const loans = await res.json();
+    myLoans = await res.json();
 
-    updateLoansBadge(loans.length);
+    updateLoansBadge(myLoans.length);
 
-    if (!loans.length) {
+    if (!myLoans.length) {
       container.innerHTML =
         '<div class="empty-state"><h3>Keine aktiven Ausleihen</h3><p>Du hast aktuell keine ausgeliehenen Bücher.</p></div>';
       return;
     }
 
-    const listHTML = loans.map((loan) => loanItemHTML(loan)).join("");
-    container.innerHTML = `
-      <div class="loan-count-info">Du hast aktuell ${loans.length} Buch${loans.length === 1 ? "" : "bücher"} ausgeliehen.</div>
-      <div class="loans-list">${listHTML}</div>`;
-
-    container.querySelectorAll(".return-btn").forEach((btn) => {
-      btn.addEventListener("click", () => returnBook(btn.dataset.loanId, btn.dataset.title));
-    });
+    renderLoans();
   } catch {
     container.innerHTML =
       '<div class="empty-state"><h3>Fehler</h3><p>Ausleihen konnten nicht geladen werden.</p></div>';
   }
+}
+
+function renderLoans() {
+  const sortDirection = document.getElementById("loanSort").value;
+  const loans = [...myLoans].sort((a, b) => {
+    const result = (a.dueDate || "").localeCompare(b.dueDate || "");
+    return sortDirection === "desc" ? -result : result;
+  });
+
+  const container = document.getElementById("loansContent");
+  const listHTML = loans.map((loan) => loanItemHTML(loan)).join("");
+  container.innerHTML = `
+    <div class="loan-count-info">Du hast aktuell ${loans.length} Buch${loans.length === 1 ? "" : "buecher"} ausgeliehen.</div>
+    <div class="loans-list">${listHTML}</div>`;
+
+  container.querySelectorAll(".return-btn").forEach((btn) => {
+    btn.addEventListener("click", () => returnBook(btn.dataset.loanId, btn.dataset.title));
+  });
 }
 
 function loanItemHTML(loan) {
@@ -250,12 +284,12 @@ function loanItemHTML(loan) {
   return `
     <div class="${itemClass}">
       <div class="loan-item-info">
-        <div class="loan-item-title">${escHtml(title)}</div>
+        <div class="loan-item-title">${esc(title)}</div>
         <div class="loan-item-due ${dueLabelClass}">${dueLine}</div>
       </div>
       <button class="btn btn-outline btn-sm return-btn"
         data-loan-id="${loan.loanId}"
-        data-title="${escAttr(title)}">
+        data-title="${esc(title)}">
         Zurückgeben
       </button>
     </div>`;
@@ -305,33 +339,6 @@ async function updateLoansBadge(count) {
   }
 }
 
-// ── Empfehlungen ──────────────────────────────────────────────────────────────
-async function loadRecommendations() {
-  const container = document.getElementById("recommendationsContent");
-  container.innerHTML = "<p>Empfehlungen werden geladen …</p>";
-
-  try {
-    const res = await apiFetch("/api/recommendations");
-    if (!res) return;
-    const books = await res.json();
-
-    if (!books.length) {
-      container.innerHTML =
-        '<div class="empty-state"><h3>Noch keine Empfehlungen</h3><p>Leih mehr Bücher aus, damit wir passende Empfehlungen finden können.</p></div>';
-      return;
-    }
-
-    container.innerHTML = `<div class="books-grid">${books.map((b) => bookCardHTML(b)).join("")}</div>`;
-
-    container.querySelectorAll(".borrow-btn").forEach((btn) => {
-      btn.addEventListener("click", () => borrowBook(btn.dataset.bookId, btn.dataset.title));
-    });
-  } catch {
-    container.innerHTML =
-      '<div class="empty-state"><h3>Fehler</h3><p>Empfehlungen konnten nicht geladen werden.</p></div>';
-  }
-}
-
 // ── Such-Steuerung ────────────────────────────────────────────────────────────
 document.getElementById("searchBtn").addEventListener("click", () => {
   loadBooks(
@@ -344,41 +351,35 @@ document.getElementById("searchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("searchBtn").click();
 });
 
+document.getElementById("loanSort").addEventListener("change", () => {
+  if (myLoans.length) renderLoans();
+});
+
 // ── Toast-Nachrichten ─────────────────────────────────────────────────────────
 function showToast(text, type = "info") {
-  const container = getOrCreateToastContainer();
-  const toast = document.createElement("div");
-  toast.className = `message message-${type === "success" ? "success" : type === "error" ? "error" : "info"}`;
-  toast.style.cssText =
-    "position:relative; min-width:260px; max-width:400px; margin-bottom:10px; box-shadow:0 4px 12px rgba(0,0,0,.15);";
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("p");
+  toast.className = `message message-${type}`;
   toast.textContent = text;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
-}
-
-function getOrCreateToastContainer() {
-  let c = document.getElementById("toastContainer");
-  if (!c) {
-    c = document.createElement("div");
-    c.id = "toastContainer";
-    c.style.cssText =
-      "position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; align-items:flex-end;";
-    document.body.appendChild(c);
-  }
-  return c;
+  setTimeout(() => toast.remove(), 3000);
 }
 
 // ── HTML-Escaping ─────────────────────────────────────────────────────────────
-function escHtml(str) {
+function esc(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-function escAttr(str) {
-  return String(str ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-Promise.all([loadCategories(), updateLoansBadge()]).then(() => loadBooks());
+Promise.all([loadCategories(), loadAuthors(), updateLoansBadge()]).then(() => loadBooks());

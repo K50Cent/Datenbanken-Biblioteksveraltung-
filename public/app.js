@@ -10,8 +10,21 @@ function showMessage(text, type = "error") {
 
 const existingToken = localStorage.getItem("libraryToken");
 if (existingToken) {
-  const user = JSON.parse(localStorage.getItem("libraryUser") || "{}");
-  window.location.href = user.role === "admin" ? "/admin.html" : "/library.html";
+  fetch("/api/auth/session", {
+    headers: { Authorization: `Bearer ${existingToken}` },
+  }).then(async (res) => {
+    if (!res.ok) {
+      localStorage.removeItem("libraryToken");
+      localStorage.removeItem("libraryUser");
+      return;
+    }
+
+    const data = await res.json();
+    window.location.href = data.user.role === "admin" ? "/admin.html" : "/library.html";
+  }).catch(() => {
+    localStorage.removeItem("libraryToken");
+    localStorage.removeItem("libraryUser");
+  });
 }
 
 loginForm.addEventListener("submit", async (e) => {
