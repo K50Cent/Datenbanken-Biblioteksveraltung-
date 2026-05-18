@@ -1,53 +1,35 @@
 <!doctype html>
 <html lang="de">
   <head>
-    <!--
-      Start:
-      npm run setup-users
-      npm run dev
-    -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bibliotheksverwaltung Anmeldung</title>
+    <title>Bibliotheksverwaltung – Anmelden</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <main>
+  <body class="auth-page">
+    <main class="auth-card">
       <h1>Bibliotheksverwaltung</h1>
-      <p id="introText">Bitte melde dich mit deinem Loginname und Passwort an.</p>
-
-      <div class="auth-switch" aria-label="Anmeldung oder Registrierung">
-        <button id="showLogin" class="switch-button active" type="button">Anmelden</button>
-        <button id="showRegister" class="switch-button" type="button">Registrieren</button>
-      </div>
+      <p class="subtitle">Bitte melde dich mit deinem Loginnamen und Passwort an.</p>
 
       <form id="loginForm">
-        <label for="loginname">Loginname</label>
-        <input id="loginname" name="loginname" autocomplete="username" required />
+        <div class="form-group">
+          <label for="loginname">Loginname</label>
+          <input id="loginname" name="loginname" autocomplete="username" required />
+        </div>
 
-        <label for="password">Passwort</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <div class="form-group">
+          <label for="password">Passwort</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </div>
 
-        <button id="submitButton" type="submit">Anmelden</button>
+        <button id="submitBtn" type="submit" class="btn btn-primary btn-full">Anmelden</button>
       </form>
 
-      <form id="registerForm" hidden>
-        <label for="registerLoginname">Loginname</label>
-        <input id="registerLoginname" name="loginname" autocomplete="username" required />
+      <div id="message" class="message" hidden></div>
 
-        <label for="vorname">Vorname</label>
-        <input id="vorname" name="vorname" autocomplete="given-name" required />
-
-        <label for="name">Name</label>
-        <input id="name" name="name" autocomplete="family-name" required />
-
-        <label for="registerPassword">Passwort</label>
-        <input id="registerPassword" name="password" type="password" autocomplete="new-password" required />
-
-        <button id="registerButton" type="submit">Account erstellen</button>
-      </form>
-
-      <div id="message" class="message"></div>
+      <p class="auth-link">
+        Noch kein Konto? <a href="/register.html">Jetzt registrieren</a>
+      </p>
     </main>
 
     <script src="/app.js" defer></script>

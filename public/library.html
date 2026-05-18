@@ -1,28 +1,67 @@
 <!doctype html>
 <html lang="de">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Bibliotheksverwaltung Übersicht</title>
-        <link rel="stylesheet" href="styles.css" />
-    </head>
-    <body class="library-page">
-        <nav class="top-nav">
-            <a href="/library.html" class="nav-link">Bücher</a>
-            <a href="/me.html" class="nav-link">Mein Bereich</a>
-        </nav>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bibliotheksverwaltung</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="app-page">
+    <nav class="navbar">
+      <div class="navbar-brand">Bibliotheksverwaltung</div>
+      <div class="navbar-user">
+        <span id="navUserName"></span>
+        <a href="/admin.html" class="btn btn-outline btn-sm" id="adminPanelBtn" hidden>Admin</a>
+        <button class="btn btn-outline btn-sm" id="logoutBtn">Abmelden</button>
+      </div>
+    </nav>
 
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Suchen" class="search-box"/>
-            <select id="categoryFilter" class="search-box">
-                <option value="">Alle Kategorien</option>
+    <div class="container">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="books">Bücher</button>
+        <button class="tab-btn" data-tab="loans">
+          Meine Ausleihen
+          <span class="badge" id="loansBadge" hidden></span>
+        </button>
+        <button class="tab-btn" data-tab="recommendations">Empfehlungen</button>
+      </div>
+
+      <!-- Tab 1: Bücher -->
+      <div id="tab-books" class="tab-content active">
+        <div class="search-bar">
+          <div class="form-group">
+            <label for="searchInput">Suche (Titel / Autor)</label>
+            <input type="text" id="searchInput" placeholder="z.B. Kafka, Faust …" />
+          </div>
+          <div class="form-group">
+            <label for="categoryFilter">Kategorie</label>
+            <select id="categoryFilter">
+              <option value="">Alle Kategorien</option>
             </select>
-            <button id="searchButton">Suchen</button>
+          </div>
+          <button class="btn btn-primary" id="searchBtn">Suchen</button>
         </div>
-        
 
-        <div id="books-list"></div>
+        <div id="booksList" class="books-grid">
+          <div class="empty-state"><p>Bücher werden geladen …</p></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Meine Ausleihen -->
+      <div id="tab-loans" class="tab-content">
+        <div id="loansContent">
+          <p>Ausleihen werden geladen …</p>
+        </div>
+      </div>
+
+      <!-- Tab 3: Empfehlungen -->
+      <div id="tab-recommendations" class="tab-content">
+        <div id="recommendationsContent">
+          <p>Empfehlungen werden geladen …</p>
+        </div>
+      </div>
+    </div>
 
     <script src="/library.js" defer></script>
-    </body>
+  </body>
 </html>
