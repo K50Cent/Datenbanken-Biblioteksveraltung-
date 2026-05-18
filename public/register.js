@@ -1,4 +1,4 @@
-const loginForm = document.querySelector("#loginForm");
+const registerForm = document.querySelector("#registerForm");
 const submitBtn = document.querySelector("#submitBtn");
 const messageEl = document.querySelector("#message");
 
@@ -10,35 +10,36 @@ function showMessage(text, type = "error") {
 
 const existingToken = localStorage.getItem("libraryToken");
 if (existingToken) {
-  const user = JSON.parse(localStorage.getItem("libraryUser") || "{}");
-  window.location.href = user.role === "admin" ? "/admin.html" : "/library.html";
+  window.location.href = "/library.html";
 }
 
-loginForm.addEventListener("submit", async (e) => {
+registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   submitBtn.disabled = true;
   messageEl.hidden = true;
 
-  const formData = new FormData(loginForm);
+  const formData = new FormData(registerForm);
 
   try {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         loginname: formData.get("loginname"),
+        vorname: formData.get("vorname"),
+        name: formData.get("name"),
         password: formData.get("password"),
       }),
     });
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) throw new Error(data.message || "Anmeldung fehlgeschlagen.");
+    if (!res.ok) throw new Error(data.message || "Registrierung fehlgeschlagen.");
 
     localStorage.setItem("libraryToken", data.token);
     localStorage.setItem("libraryUser", JSON.stringify(data.user));
 
-    window.location.href = data.user.role === "admin" ? "/admin.html" : "/library.html";
+    window.location.href = "/library.html";
   } catch (err) {
     showMessage(err.message);
   } finally {
