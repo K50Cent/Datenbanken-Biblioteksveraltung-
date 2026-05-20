@@ -146,9 +146,7 @@ async function createCategoriesTable() {
 /**
  * Loans-Tabelle
  * PK: loanId (String)
- * GSI: userId-index → für Abfragen nach Benutzer
  * GSI: bookId-index → für Empfehlungsalgorithmus (Ausleihfrequenz pro Buch)
- * Hinweis: DynamoDB erlaubt max. 1 GSI gleichzeitig beim Erstellen → beide werden hier angelegt.
  */
 async function createLoansTable() {
   await createTable("Loans", {

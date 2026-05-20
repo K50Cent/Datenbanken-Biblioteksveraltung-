@@ -34,15 +34,6 @@ a:hover {
   display: none !important;
 }
 
-body.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.auth-card,
 .card,
 .search-bar,
 .empty-state,
@@ -52,23 +43,6 @@ body.auth-page {
   background: #ffffff;
   border: 1px solid #d8dee4;
   border-radius: 6px;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 28px;
-}
-
-.subtitle,
-.auth-link {
-  font-size: 14px;
-}
-
-.auth-link {
-  display: block;
-  margin-top: 18px;
-  text-align: center;
 }
 
 .form-group {

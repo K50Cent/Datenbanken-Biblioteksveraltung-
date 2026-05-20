@@ -12,6 +12,9 @@
 
 "use strict";
 
+let allCategories = [];
+let allAuthors = [];
+
 // ─── API-Hilfsfunktion ──────────────────────────────────────────────────────
 
 /**
@@ -109,12 +112,14 @@ function bookCardHTML(book, showLoanCount = false) {
   const loanCountBadge = showLoanCount && book.loanCount != null
     ? `<span class="loan-count-badge" title="Gesamte Ausleihen">${book.loanCount}×</span>`
     : "";
+  const categoryText = getCategoryName(book.categoryId);
 
   return `
     <div class="book-card">
       <div class="book-card-title">${escHtml(book.title || "Unbekannter Titel")}${loanCountBadge}</div>
       <div class="book-card-meta">
         <div>Autor: ${escHtml(authorText)}</div>
+        <div>Kategorie: ${escHtml(categoryText)}</div>
         <div>ISBN: ${escHtml(book.isbn || "–")}</div>
         <div>Jahr: ${book.year || "–"}</div>
       </div>
@@ -202,6 +207,7 @@ async function loadBooks() {
 async function loadCategories() {
   try {
     const cats = await apiFetch("/api/categories");
+    allCategories = cats;
     const filterSel  = document.getElementById("categoryFilter");
     const bookCatSel = document.getElementById("bookCategory");
 
@@ -211,9 +217,15 @@ async function loadCategories() {
       filterSel.add(opt.cloneNode(true));
       bookCatSel.add(opt.cloneNode(true));
     }
+    renderAdminCategories();
   } catch (err) {
     console.error("Kategorien konnten nicht geladen werden:", err);
   }
+}
+
+function getCategoryName(categoryId) {
+  if (!categoryId) return "–";
+  return allCategories.find((cat) => cat.categoryId === categoryId)?.name || categoryId;
 }
 
 // ─── Autoren-Dropdown befüllen ────────────────────────────────────────────────
@@ -224,15 +236,82 @@ async function loadCategories() {
 async function loadAuthorsDropdown() {
   try {
     const authors = await apiFetch("/api/authors");
+    allAuthors = authors;
     const sel = document.getElementById("bookAuthors");
     sel.innerHTML = "";
     authors.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     for (const a of authors) {
       sel.add(new Option(`${a.firstname} ${a.name}`, a.authorID || a.authorId));
     }
+    renderAdminAuthors();
   } catch (err) {
     console.error("Autoren konnten nicht geladen werden:", err);
   }
+}
+
+function renderAdminAuthors() {
+  const content = document.getElementById("authorsListContent");
+  if (!content) return;
+
+  if (!allAuthors.length) {
+    content.innerHTML = `<div class="empty-state"><p>Noch keine Autoren vorhanden.</p></div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Vorname</th><th>Nachname</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          ${allAuthors.map((author) => `
+            <tr>
+              <td>${escHtml(author.firstname || "")}</td>
+              <td>${escHtml(author.name || "")}</td>
+              <td>
+                <div class="td-actions">
+                  <button class="btn-sm btn-outline" onclick="editAuthor('${author.authorID || author.authorId}')">Bearbeiten</button>
+                  <button class="btn-sm btn-danger" onclick="deleteAuthor('${author.authorID || author.authorId}')">Löschen</button>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderAdminCategories() {
+  const content = document.getElementById("categoriesListContent");
+  if (!content) return;
+
+  if (!allCategories.length) {
+    content.innerHTML = `<div class="empty-state"><p>Noch keine Kategorien vorhanden.</p></div>`;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          ${allCategories.map((category) => `
+            <tr>
+              <td>${escHtml(category.name || "")}</td>
+              <td>
+                <div class="td-actions">
+                  <button class="btn-sm btn-outline" onclick="editCategory('${category.categoryId}')">Bearbeiten</button>
+                  <button class="btn-sm btn-danger" onclick="deleteCategory('${category.categoryId}')">Löschen</button>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 // ─── Aktive Ausleihen ─────────────────────────────────────────────────────────
@@ -418,6 +497,46 @@ document.getElementById("authorForm").addEventListener("submit", async (e) => {
   }
 });
 
+async function editAuthor(authorId) {
+  const author = allAuthors.find((entry) => (entry.authorID || entry.authorId) === authorId);
+  if (!author) return;
+
+  const firstname = prompt("Vorname:", author.firstname || "");
+  if (firstname === null) return;
+
+  const name = prompt("Nachname:", author.name || "");
+  if (name === null) return;
+
+  try {
+    await apiFetch(`/api/authors/${authorId}`, {
+      method: "PUT",
+      body: JSON.stringify({ firstname, name }),
+    });
+    showToast("Autor aktualisiert.", "success");
+    loadAuthorsDropdown();
+    loadBooks();
+    loadRecommendations();
+    loadAdminBookList();
+  } catch (err) {
+    showToast(err.message || "Autor konnte nicht aktualisiert werden.", "error");
+  }
+}
+
+async function deleteAuthor(authorId) {
+  if (!confirm("Autor wirklich löschen? Die Verknüpfung zu Büchern wird entfernt.")) return;
+
+  try {
+    await apiFetch(`/api/authors/${authorId}`, { method: "DELETE" });
+    showToast("Autor gelöscht.", "success");
+    loadAuthorsDropdown();
+    loadBooks();
+    loadRecommendations();
+    loadAdminBookList();
+  } catch (err) {
+    showToast(err.message || "Autor konnte nicht gelöscht werden.", "error");
+  }
+}
+
 // ─── Admin: Kategorien-Formular ───────────────────────────────────────────────
 
 document.getElementById("categoryForm").addEventListener("submit", async (e) => {
@@ -435,6 +554,47 @@ document.getElementById("categoryForm").addEventListener("submit", async (e) => 
     showFormMsg("categoryFormMsg", err.message || "Fehler beim Speichern.", "error");
   }
 });
+
+async function editCategory(categoryId) {
+  const category = allCategories.find((entry) => entry.categoryId === categoryId);
+  if (!category) return;
+
+  const name = prompt("Kategoriename:", category.name || "");
+  if (name === null) return;
+
+  try {
+    await apiFetch(`/api/categories/${categoryId}`, {
+      method: "PUT",
+      body: JSON.stringify({ name }),
+    });
+    showToast("Kategorie aktualisiert.", "success");
+    document.getElementById("categoryFilter").innerHTML = '<option value="">Alle Kategorien</option>';
+    document.getElementById("bookCategory").innerHTML = '<option value="">Keine Kategorie</option>';
+    loadCategories();
+    loadBooks();
+    loadRecommendations();
+    loadAdminBookList();
+  } catch (err) {
+    showToast(err.message || "Kategorie konnte nicht aktualisiert werden.", "error");
+  }
+}
+
+async function deleteCategory(categoryId) {
+  if (!confirm("Kategorie wirklich löschen? Bücher behalten dann nur noch die Kategorie-ID.")) return;
+
+  try {
+    await apiFetch(`/api/categories/${categoryId}`, { method: "DELETE" });
+    showToast("Kategorie gelöscht.", "success");
+    document.getElementById("categoryFilter").innerHTML = '<option value="">Alle Kategorien</option>';
+    document.getElementById("bookCategory").innerHTML = '<option value="">Keine Kategorie</option>';
+    loadCategories();
+    loadBooks();
+    loadRecommendations();
+    loadAdminBookList();
+  } catch (err) {
+    showToast(err.message || "Kategorie konnte nicht gelöscht werden.", "error");
+  }
+}
 
 // ─── Admin: Bücher-Liste ──────────────────────────────────────────────────────
 
@@ -569,3 +729,7 @@ window.borrowBook  = borrowBook;
 window.returnBook  = returnBook;
 window.editBook    = editBook;
 window.deleteBook  = deleteBook;
+window.editAuthor = editAuthor;
+window.deleteAuthor = deleteAuthor;
+window.editCategory = editCategory;
+window.deleteCategory = deleteCategory;

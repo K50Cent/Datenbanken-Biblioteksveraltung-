@@ -7,9 +7,9 @@
 
 import crypto from "node:crypto";
 import express from "express";
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { authorsTable, trimValue, scanAll } from "../helpers.js";
+import { authorsTable, bookAuthorsTable, trimValue, scanAll } from "../helpers.js";
 
 const router = express.Router();
 
@@ -58,6 +58,61 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error("Fehler beim Anlegen des Autors:", error);
     return res.status(500).json({ message: "Autor konnte nicht gespeichert werden." });
+  }
+});
+
+router.put("/:id", async (req, res) => {
+  const authorID = req.params.id;
+  const name = trimValue(req.body.name);
+  const firstname = trimValue(req.body.firstname);
+
+  if (!name || !firstname) {
+    return res.status(400).json({ message: "Name und Vorname sind Pflichtfelder." });
+  }
+
+  try {
+    const existing = await docClient.send(new GetCommand({ TableName: authorsTable, Key: { authorID } }));
+    if (!existing.Item) {
+      return res.status(404).json({ message: "Autor nicht gefunden." });
+    }
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: authorsTable,
+        Key: { authorID },
+        UpdateExpression: "SET #name = :name, firstname = :firstname",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: { ":name": name, ":firstname": firstname },
+      }),
+    );
+
+    return res.json({ message: "Autor erfolgreich aktualisiert." });
+  } catch (error) {
+    console.error("Fehler beim Aktualisieren des Autors:", error);
+    return res.status(500).json({ message: "Autor konnte nicht aktualisiert werden." });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  const authorID = req.params.id;
+
+  try {
+    const links = await scanAll(bookAuthorsTable, "authorId = :authorId", { ":authorId": authorID });
+
+    for (const link of links) {
+      await docClient.send(
+        new DeleteCommand({
+          TableName: bookAuthorsTable,
+          Key: { bookId: link.bookId, authorId: link.authorId },
+        }),
+      );
+    }
+
+    await docClient.send(new DeleteCommand({ TableName: authorsTable, Key: { authorID } }));
+    return res.json({ message: "Autor erfolgreich gelöscht." });
+  } catch (error) {
+    console.error("Fehler beim Löschen des Autors:", error);
+    return res.status(500).json({ message: "Autor konnte nicht gelöscht werden." });
   }
 });
 
