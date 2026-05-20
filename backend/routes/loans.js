@@ -1,16 +1,15 @@
 /**
  * routes/loans.js
- * Ausleihen-Routen: Buch ausleihen, eigene Ausleihen anzeigen, Buch zurückgeben.
+ * Ausleihen-Routen: Buch ausleihen, alle Ausleihen anzeigen, Buch zurückgeben.
  * Alle Endpunkte unter /api/loans/
- * Alle Routen erfordern einen gültigen Token (eingeloggter Benutzer).
+ * Kein Login erforderlich (Kirchberg-Version ohne Auth).
  */
 
 import crypto from "node:crypto";
 import express from "express";
 import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { verifyToken } from "../auth.js";
-import { booksTable, loansTable, queryAll } from "../helpers.js";
+import { booksTable, loansTable, scanAll } from "../helpers.js";
 
 const router = express.Router();
 
@@ -18,13 +17,12 @@ const router = express.Router();
 
 /**
  * POST /api/loans
- * Leiht ein Buch für den aktuell eingeloggten Benutzer aus.
- * Laufzeit: 14 Tage ab heute (dueDate).
+ * Leiht ein Buch aus. Laufzeit: 14 Tage ab heute (dueDate).
  * Unterstützt beide Datenbankschemas:
  *   - Neu: availableCopies (atomares Dekrement mit ConditionExpression)
  *   - Legacy: available (Boolean, wird auf false gesetzt)
  */
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", async (req, res) => {
   const bookId = String(req.body.bookId || "").trim();
 
   if (!bookId) {
@@ -72,12 +70,11 @@ router.post("/", verifyToken, async (req, res) => {
       );
     }
 
-    // Ausleihe-Datensatz anlegen
+    // Ausleihe-Datensatz anlegen (ohne userId – kein Login erforderlich)
     const now     = new Date();
     const dueDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
     const loan    = {
       loanId:     crypto.randomUUID(),
-      userId:     req.user.userId,
       bookId,
       borrowedAt: now.toISOString(),
       dueDate,
@@ -91,17 +88,17 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// ─── Eigene Ausleihen anzeigen ─────────────────────────────────────────────
+// ─── Alle aktiven Ausleihen anzeigen ──────────────────────────────────────────
 
 /**
- * GET /api/loans/my
- * Gibt alle aktiven Ausleihen des eingeloggten Benutzers zurück.
+ * GET /api/loans
+ * Gibt alle aktiven (nicht zurückgegebenen) Ausleihen zurück.
  * Jede Ausleihe wird mit dem Buchtitel angereichert.
  * Sortiert nach Fälligkeitsdatum aufsteigend.
  */
-router.get("/my", verifyToken, async (req, res) => {
+router.get("/", async (_req, res) => {
   try {
-    const loans = await queryAll(loansTable, "userId-index", "userId = :uid", { ":uid": req.user.userId });
+    const loans = await scanAll(loansTable);
     const activeLoans = loans.filter((l) => !l.returnedAt);
 
     // Buchtitel zu jeder Ausleihe laden
@@ -122,7 +119,7 @@ router.get("/my", verifyToken, async (req, res) => {
     enriched.sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
     return res.json(enriched);
   } catch (error) {
-    console.error("Fehler beim Laden der eigenen Ausleihen:", error);
+    console.error("Fehler beim Laden der Ausleihen:", error);
     return res.status(500).json({ message: "Ausleihen konnten nicht geladen werden." });
   }
 });
@@ -133,9 +130,8 @@ router.get("/my", verifyToken, async (req, res) => {
  * POST /api/loans/:id/return
  * Markiert eine Ausleihe als zurückgegeben (returnedAt) und
  * erhöht die verfügbaren Exemplare des Buches wieder.
- * Nur der Benutzer der Ausleihe darf zurückgeben (403 sonst).
  */
-router.post("/:id/return", verifyToken, async (req, res) => {
+router.post("/:id/return", async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -146,9 +142,6 @@ router.post("/:id/return", verifyToken, async (req, res) => {
     const loan = loanResult.Item;
     if (!loan) {
       return res.status(404).json({ message: "Ausleihe nicht gefunden." });
-    }
-    if (loan.userId !== req.user.userId) {
-      return res.status(403).json({ message: "Diese Ausleihe gehört nicht zu deinem Konto." });
     }
     if (loan.returnedAt) {
       return res.status(409).json({ message: "Dieses Buch wurde bereits zurückgegeben." });

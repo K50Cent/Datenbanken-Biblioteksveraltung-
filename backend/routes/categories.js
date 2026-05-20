@@ -2,14 +2,13 @@
  * routes/categories.js
  * Kategorien-Routen: Auflisten und Anlegen.
  * Alle Endpunkte unter /api/categories/
- * Lesen ist öffentlich, Anlegen erfordert Admin-Rolle.
+ * Kein Login erforderlich (Kirchberg-Version ohne Auth).
  */
 
 import crypto from "node:crypto";
 import express from "express";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { verifyToken, requireAdmin } from "../auth.js";
 import { categoriesTable, trimValue, scanAll } from "../helpers.js";
 
 const router = express.Router();
@@ -19,7 +18,7 @@ const router = express.Router();
 /**
  * GET /api/categories
  * Gibt alle Kategorien zurück.
- * Wird im Bücher-Filter und im Admin-Formular genutzt.
+ * Wird im Bücher-Filter und im Admin-Bereich genutzt.
  */
 router.get("/", async (_req, res) => {
   try {
@@ -34,10 +33,10 @@ router.get("/", async (_req, res) => {
 // ─── Kategorie anlegen ─────────────────────────────────────────────────────
 
 /**
- * POST /api/categories  [Admin]
+ * POST /api/categories  [Admin-Bereich]
  * Legt eine neue Kategorie mit einem automatisch generierten categoryId an.
  */
-router.post("/", verifyToken, requireAdmin, async (req, res) => {
+router.post("/", async (req, res) => {
   const name = trimValue(req.body.name);
 
   if (!name) {

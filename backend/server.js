@@ -5,8 +5,7 @@
  * und registriert alle API-Routen.
  *
  * Routen-Übersicht:
- *   /api/auth/       → routes/auth.js       (Login, Registrierung)
- *   /api/books/      → routes/books.js      (Bücher CRUD)
+ *   /api/books/      → routes/books.js      (Bücher CRUD + Empfehlungen)
  *   /api/authors/    → routes/authors.js    (Autoren)
  *   /api/categories/ → routes/categories.js (Kategorien)
  *   /api/loans/      → routes/loans.js      (Ausleihen)
@@ -16,7 +15,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 
-import authRoutes       from "./routes/auth.js";
 import bookRoutes       from "./routes/books.js";
 import authorRoutes     from "./routes/authors.js";
 import categoryRoutes   from "./routes/categories.js";
@@ -36,7 +34,6 @@ app.use(express.static(publicPath));
 
 // ─── API-Routen ────────────────────────────────────────────────────────────
 
-app.use("/api/auth",       authRoutes);
 app.use("/api/books",      bookRoutes);
 app.use("/api/authors",    authorRoutes);
 app.use("/api/categories", categoryRoutes);

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node backend/server.js",
     "start": "node backend/server.js",
-    "setup-users": "node backend/setupUsers.js",
+    "setup": "node backend/setupTables.js",
     "use-aws-db": "sh scripts/use-aws-db.sh",
     "use-local-db": "sh scripts/use-local-db.sh"
   },

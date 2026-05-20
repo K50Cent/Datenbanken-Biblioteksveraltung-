@@ -1,18 +1,19 @@
 /**
  * routes/books.js
- * Bücher-Routen: Auflisten, Anlegen, Bearbeiten, Löschen.
+ * Bücher-Routen: Auflisten, Empfehlungen, Anlegen, Bearbeiten, Löschen.
  * Alle Endpunkte unter /api/books/
- * Lesen ist öffentlich, Schreiben erfordert Admin-Rolle.
+ * Alle Routen sind ohne Login zugänglich (Kirchberg-Version ohne Auth).
  */
 
 import crypto from "node:crypto";
 import express from "express";
 import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { verifyToken, requireAdmin } from "../auth.js";
 import {
   booksTable,
   bookAuthorsTable,
+  categoriesTable,
+  loansTable,
   trimValue,
   scanAll,
   queryAll,
@@ -20,6 +21,74 @@ import {
 } from "../helpers.js";
 
 const router = express.Router();
+
+// ─── Empfehlungen ──────────────────────────────────────────────────────────
+// WICHTIG: Vor GET /:id registriert, sonst matched Express "recommendations" als :id
+
+/**
+ * GET /api/books/recommendations
+ * Gibt die Top-5-Bücher der meistausgeliehenen Kategorie zurück.
+ * Algorithmus:
+ *   1. Alle Ausleihen zählen (aktiv + abgeschlossen) pro Buch
+ *   2. Kategorie mit höchster Gesamt-Ausleihzahl ermitteln
+ *   3. Top 5 Bücher dieser Kategorie nach Ausleihzahl zurückgeben
+ * Fallback: 5 beliebige Bücher, wenn keine Ausleihen vorhanden.
+ */
+router.get("/recommendations", async (_req, res) => {
+  try {
+    const [allLoans, allBooks] = await Promise.all([
+      scanAll(loansTable),
+      scanAll(booksTable),
+    ]);
+
+    // Fallback: keine Ausleihen → 5 beliebige Bücher
+    if (!allLoans.length) {
+      const fallback = await enrichBooksWithAuthorsAndAvailability(allBooks.slice(0, 5));
+      return res.json({ categoryName: null, books: fallback.map((b) => ({ ...b, loanCount: 0 })) });
+    }
+
+    // Ausleihfrequenz pro Buch zählen (aktiv + abgeschlossen)
+    const loanCountMap = {};
+    for (const loan of allLoans) {
+      loanCountMap[loan.bookId] = (loanCountMap[loan.bookId] || 0) + 1;
+    }
+
+    // Bücher nach Kategorie gruppieren und Kategorie-Scores berechnen
+    const categoryScores = {};
+    for (const book of allBooks) {
+      const cat = book.categoryId || "__none__";
+      categoryScores[cat] = (categoryScores[cat] || 0) + (loanCountMap[book.bookId] || 0);
+    }
+
+    // Kategorie mit höchstem Score ermitteln
+    const topCategoryId = Object.entries(categoryScores)
+      .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+    // Bücher dieser Kategorie nach Ausleihzahl sortieren, Top 5 nehmen
+    const topBooks = allBooks
+      .filter((b) => (b.categoryId || "__none__") === topCategoryId)
+      .sort((a, b) => (loanCountMap[b.bookId] || 0) - (loanCountMap[a.bookId] || 0))
+      .slice(0, 5);
+
+    // Bücher anreichern und loanCount hinzufügen
+    const enriched = await enrichBooksWithAuthorsAndAvailability(topBooks);
+    const result = enriched.map((b) => ({ ...b, loanCount: loanCountMap[b.bookId] || 0 }));
+
+    // Kategorienamen laden
+    let categoryName = null;
+    if (topCategoryId && topCategoryId !== "__none__") {
+      const catResult = await docClient.send(
+        new GetCommand({ TableName: categoriesTable, Key: { categoryId: topCategoryId } }),
+      );
+      categoryName = catResult.Item?.name || null;
+    }
+
+    return res.json({ categoryName, books: result });
+  } catch (error) {
+    console.error("Fehler beim Laden der Empfehlungen:", error);
+    return res.status(500).json({ message: "Empfehlungen konnten nicht geladen werden." });
+  }
+});
 
 // ─── Bücher auflisten ──────────────────────────────────────────────────────
 
@@ -74,12 +143,12 @@ router.get("/", async (req, res) => {
 // ─── Buch anlegen ──────────────────────────────────────────────────────────
 
 /**
- * POST /api/books  [Admin]
+ * POST /api/books  [Admin-Bereich]
  * Legt ein neues Buch an und verknüpft es mit den angegebenen Autoren
  * über die BookAuthors-Tabelle.
  * Pflichtfelder: title, isbn, year
  */
-router.post("/", verifyToken, requireAdmin, async (req, res) => {
+router.post("/", async (req, res) => {
   const { title, isbn, year, categoryId, authorIds = [], availableCopies = 1, totalCopies } = req.body;
 
   if (!title || !isbn || !year) {
@@ -118,11 +187,11 @@ router.post("/", verifyToken, requireAdmin, async (req, res) => {
 // ─── Buch bearbeiten ───────────────────────────────────────────────────────
 
 /**
- * PUT /api/books/:id  [Admin]
+ * PUT /api/books/:id  [Admin-Bereich]
  * Aktualisiert Buchdaten und ersetzt die Autoren-Verknüpfungen komplett.
  * Alte BookAuthors-Einträge werden gelöscht, neue werden angelegt.
  */
-router.put("/:id", verifyToken, requireAdmin, async (req, res) => {
+router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { title, isbn, year, categoryId, authorIds = [], availableCopies, totalCopies } = req.body;
 
@@ -176,10 +245,10 @@ router.put("/:id", verifyToken, requireAdmin, async (req, res) => {
 // ─── Buch löschen ──────────────────────────────────────────────────────────
 
 /**
- * DELETE /api/books/:id  [Admin]
+ * DELETE /api/books/:id  [Admin-Bereich]
  * Löscht ein Buch und alle zugehörigen BookAuthors-Einträge.
  */
-router.delete("/:id", verifyToken, requireAdmin, async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {

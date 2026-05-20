@@ -1,37 +1,241 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bibliotheksverwaltung – Anmelden</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body class="auth-page">
-    <main class="auth-card">
-      <h1>Bibliotheksverwaltung</h1>
-      <p class="subtitle">Bitte melde dich mit deinem Loginnamen und Passwort an.</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bibliotheksverwaltung</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ─── Zusätzliche Stile für Single-Page-Layout ─────────────────────── */
+    .page-section {
+      margin-bottom: 36px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #237a57;
+      color: #1f2933;
+    }
+    .section-title span {
+      color: #237a57;
+    }
 
-      <form id="loginForm">
-        <div class="form-group">
-          <label for="loginname">Loginname</label>
-          <input id="loginname" name="loginname" autocomplete="username" required />
+    /* ─── Admin-Bereich (aufklappbar) ──────────────────────────────────── */
+    details#adminSection {
+      background: #fff;
+      border: 1px solid #d8dee4;
+      border-radius: 6px;
+      margin-bottom: 36px;
+    }
+    details#adminSection > summary {
+      padding: 14px 18px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    details#adminSection > summary::before {
+      content: "▶";
+      font-size: 11px;
+      transition: transform 0.2s;
+    }
+    details#adminSection[open] > summary::before {
+      transform: rotate(90deg);
+    }
+    .admin-inner {
+      padding: 0 18px 18px;
+      border-top: 1px solid #e1e7ec;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 14px 0;
+      border-bottom: 1px solid #cfd7df;
+    }
+
+    /* ─── Empfehlungs-Badge ─────────────────────────────────────────────── */
+    .loan-count-badge {
+      display: inline-block;
+      background: #237a57;
+      color: #fff;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Navigation ────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <span class="navbar-brand">📚 Bibliotheksverwaltung</span>
+</nav>
+
+<!-- ─── Hauptinhalt ───────────────────────────────────────────────────────── -->
+<div class="container">
+
+  <!-- Sektion 1: Empfehlungen -->
+  <section class="page-section" id="recommendationsSection">
+    <h2 class="section-title">
+      Empfehlungen – Beliebteste Kategorie: <span id="recCategoryName">wird geladen…</span>
+    </h2>
+    <div id="recBooks" class="books-grid">
+      <p style="color:#667786">Empfehlungen werden geladen…</p>
+    </div>
+  </section>
+
+  <!-- Sektion 2: Bücher durchsuchen -->
+  <section class="page-section" id="browseSection">
+    <h2 class="section-title">Bücher durchsuchen</h2>
+
+    <div class="search-bar">
+      <div class="form-group">
+        <label for="searchInput">Suche</label>
+        <input id="searchInput" type="text" placeholder="Titel oder Autor…">
+      </div>
+      <div class="form-group">
+        <label for="categoryFilter">Kategorie</label>
+        <select id="categoryFilter">
+          <option value="">Alle Kategorien</option>
+        </select>
+      </div>
+      <button id="searchBtn">Suchen</button>
+    </div>
+
+    <div id="booksList" class="books-grid">
+      <p style="color:#667786">Bücher werden geladen…</p>
+    </div>
+  </section>
+
+  <!-- Sektion 3: Aktive Ausleihen -->
+  <section class="page-section" id="loansSection">
+    <h2 class="section-title">Aktuelle Ausleihen</h2>
+    <div id="loansContent">
+      <p style="color:#667786">Ausleihen werden geladen…</p>
+    </div>
+  </section>
+
+  <!-- Sektion 4: Admin-Bereich (aufklappbar) -->
+  <details id="adminSection">
+    <summary>⚙ Admin-Bereich</summary>
+
+    <div class="admin-inner">
+      <!-- Admin-Tabs -->
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="adminBooks">Bücher</button>
+        <button class="tab-btn" data-tab="adminAuthors">Autoren</button>
+        <button class="tab-btn" data-tab="adminCategories">Kategorien</button>
+        <button class="tab-btn" data-tab="adminBookList">Bücher-Liste</button>
+      </div>
+
+      <!-- Tab: Buch anlegen/bearbeiten -->
+      <div id="adminBooks" class="tab-content active">
+        <h3 id="bookFormTitle">Neues Buch anlegen</h3>
+        <form id="bookForm">
+          <input type="hidden" id="editBookId">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bookTitle">Titel *</label>
+              <input id="bookTitle" type="text" required>
+            </div>
+            <div class="form-group">
+              <label for="bookIsbn">ISBN *</label>
+              <input id="bookIsbn" type="text" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bookYear">Jahr *</label>
+              <input id="bookYear" type="number" required>
+            </div>
+            <div class="form-group">
+              <label for="bookCategory">Kategorie</label>
+              <select id="bookCategory">
+                <option value="">Keine Kategorie</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bookAvailable">Verfügbare Exemplare</label>
+              <input id="bookAvailable" type="number" min="0" value="1">
+            </div>
+            <div class="form-group">
+              <label for="bookTotal">Gesamtanzahl Exemplare</label>
+              <input id="bookTotal" type="number" min="1" value="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bookAuthors">Autoren (Mehrfachauswahl möglich)</label>
+            <select id="bookAuthors" multiple></select>
+          </div>
+          <div id="bookFormMsg"></div>
+          <div class="form-actions" style="margin-top:12px">
+            <button type="submit" id="bookSubmitBtn">Buch speichern</button>
+            <button type="button" id="bookCancelBtn" hidden class="btn-outline">Abbrechen</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab: Autoren anlegen -->
+      <div id="adminAuthors" class="tab-content">
+        <h3>Neuen Autor anlegen</h3>
+        <form id="authorForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="authorFirstname">Vorname *</label>
+              <input id="authorFirstname" type="text" required>
+            </div>
+            <div class="form-group">
+              <label for="authorName">Nachname *</label>
+              <input id="authorName" type="text" required>
+            </div>
+          </div>
+          <div id="authorFormMsg"></div>
+          <div class="form-actions" style="margin-top:12px">
+            <button type="submit">Autor speichern</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab: Kategorien anlegen -->
+      <div id="adminCategories" class="tab-content">
+        <h3>Neue Kategorie anlegen</h3>
+        <form id="categoryForm">
+          <div class="form-group">
+            <label for="categoryName">Name *</label>
+            <input id="categoryName" type="text" required>
+          </div>
+          <div id="categoryFormMsg"></div>
+          <div class="form-actions" style="margin-top:12px">
+            <button type="submit">Kategorie speichern</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tab: Bücher-Liste (bearbeiten/löschen) -->
+      <div id="adminBookList" class="tab-content">
+        <h3>Alle Bücher</h3>
+        <div id="adminBookListContent">
+          <p style="color:#667786">Wird geladen…</p>
         </div>
+      </div>
+    </div>
+  </details>
 
-        <div class="form-group">
-          <label for="password">Passwort</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required />
-        </div>
+</div><!-- /.container -->
 
-        <button id="submitBtn" type="submit" class="btn btn-primary btn-full">Anmelden</button>
-      </form>
+<!-- Toast-Container -->
+<div id="toastContainer"></div>
 
-      <div id="message" class="message" hidden></div>
-
-      <p class="auth-link">
-        Noch kein Konto? <a href="/register.html">Jetzt registrieren</a>
-      </p>
-    </main>
-
-    <script src="/app.js" defer></script>
-  </body>
+<script src="app.js"></script>
+</body>
 </html>

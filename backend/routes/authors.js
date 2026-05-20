@@ -2,14 +2,13 @@
  * routes/authors.js
  * Autoren-Routen: Auflisten und Anlegen.
  * Alle Endpunkte unter /api/authors/
- * Lesen ist öffentlich, Anlegen erfordert Admin-Rolle.
+ * Kein Login erforderlich (Kirchberg-Version ohne Auth).
  */
 
 import crypto from "node:crypto";
 import express from "express";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { verifyToken, requireAdmin } from "../auth.js";
 import { authorsTable, trimValue, scanAll } from "../helpers.js";
 
 const router = express.Router();
@@ -19,7 +18,7 @@ const router = express.Router();
 /**
  * GET /api/authors
  * Gibt alle Autoren aus der Authors-Tabelle zurück.
- * Wird im Admin-Formular für das Dropdown genutzt.
+ * Wird im Admin-Bereich für das Dropdown genutzt.
  */
 router.get("/", async (_req, res) => {
   try {
@@ -34,11 +33,11 @@ router.get("/", async (_req, res) => {
 // ─── Autor anlegen ─────────────────────────────────────────────────────────
 
 /**
- * POST /api/authors  [Admin]
+ * POST /api/authors  [Admin-Bereich]
  * Legt einen neuen Autor mit Vor- und Nachname an.
  * Der Primärschlüssel authorID folgt dem bestehenden Tabellenschema (Großbuchstabe D).
  */
-router.post("/", verifyToken, requireAdmin, async (req, res) => {
+router.post("/", async (req, res) => {
   const name      = trimValue(req.body.name);
   const firstname = trimValue(req.body.firstname);
 
