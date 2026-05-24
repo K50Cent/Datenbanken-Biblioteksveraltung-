@@ -34,61 +34,55 @@ const router = express.Router();
  *   3. Top 5 Bücher dieser Kategorie nach Ausleihzahl zurückgeben
  * Fallback: 5 beliebige Bücher, wenn keine Ausleihen vorhanden.
  */
-router.get("/recommendations", async (_req, res) => {
+router.get("/recommendations/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
   try {
-    const [allLoans, allBooks] = await Promise.all([
-      scanAll(loansTable),
-      scanAll(booksTable),
-    ]);
+    // 1. Alle Ausleihen dieses Users laden
+    const myLoans = await scanAll(loansTable, "userId = :u", { ":u": userId });
 
-    // Fallback: keine Ausleihen → 5 beliebige Bücher
-    if (!allLoans.length) {
-      const fallback = await enrichBooksWithAuthorsAndAvailability(allBooks.slice(0, 5));
-      return res.json({ categoryName: null, books: fallback.map((b) => ({ ...b, loanCount: 0 })) });
+    if (!myLoans.length) {
+      return res.json({ categoryName: null, books: [] });
     }
 
-    // Ausleihfrequenz pro Buch zählen (aktiv + abgeschlossen)
-    const loanCountMap = {};
-    for (const loan of allLoans) {
-      loanCountMap[loan.bookId] = (loanCountMap[loan.bookId] || 0) + 1;
-    }
+    // 2. Kategorien zählen
+    const categoryCount = {};
 
-    // Bücher nach Kategorie gruppieren und Kategorie-Scores berechnen
-    const categoryScores = {};
-    for (const book of allBooks) {
-      const cat = book.categoryId || "__none__";
-      categoryScores[cat] = (categoryScores[cat] || 0) + (loanCountMap[book.bookId] || 0);
-    }
-
-    // Kategorie mit höchstem Score ermitteln
-    const topCategoryId = Object.entries(categoryScores)
-      .sort(([, a], [, b]) => b - a)[0]?.[0];
-
-    // Bücher dieser Kategorie nach Ausleihzahl sortieren, Top 5 nehmen
-    const topBooks = allBooks
-      .filter((b) => (b.categoryId || "__none__") === topCategoryId)
-      .sort((a, b) => (loanCountMap[b.bookId] || 0) - (loanCountMap[a.bookId] || 0))
-      .slice(0, 5);
-
-    // Bücher anreichern und loanCount hinzufügen
-    const enriched = await enrichBooksWithAuthorsAndAvailability(topBooks);
-    const result = enriched.map((b) => ({ ...b, loanCount: loanCountMap[b.bookId] || 0 }));
-
-    // Kategorienamen laden
-    let categoryName = null;
-    if (topCategoryId && topCategoryId !== "__none__") {
-      const catResult = await docClient.send(
-        new GetCommand({ TableName: categoriesTable, Key: { categoryId: topCategoryId } }),
+    for (const loan of myLoans) {
+      const book = await docClient.send(
+        new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } })
       );
-      categoryName = catResult.Item?.name || null;
+
+      const cat = book.Item?.categoryId || "__none__";
+      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     }
 
-    return res.json({ categoryName, books: result });
+    // 3. Lieblingskategorie bestimmen
+    const topCategory = Object.entries(categoryCount)
+      .sort((a, b) => b[1] - a[1])[0][0];
+
+    // 4. Bücher aus dieser Kategorie laden
+    const books = await queryAll(
+      booksTable,
+      "categoryId-index",
+      "categoryId = :c",
+      { ":c": topCategory }
+    );
+
+    // 5. Bücher anreichern
+    const enriched = await enrichBooksWithAuthorsAndAvailability(books);
+
+    return res.json({
+      categoryName: topCategory,
+      books: enriched.slice(0, 5),
+    });
+
   } catch (error) {
-    console.error("Fehler beim Laden der Empfehlungen:", error);
+    console.error("Fehler bei personalisierten Empfehlungen:", error);
     return res.status(500).json({ message: "Empfehlungen konnten nicht geladen werden." });
   }
 });
+
 
 // ─── Bücher auflisten ──────────────────────────────────────────────────────
 

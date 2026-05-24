@@ -12,6 +12,10 @@
 
 "use strict";
 
+let CURRENT_USER_ID = null;
+
+
+
 let allCategories = [];
 let allAuthors = [];
 
@@ -87,36 +91,53 @@ function formatDate(iso) {
  */
 function bookCardHTML(book, showLoanCount = false) {
   // Autoren: alle aus book.authors[], Fallback auf book.author
-  const authorText = book.authors?.length
-    ? book.authors.map((a) => `${a.firstname || ""} ${a.name || ""}`.trim()).join(", ")
-    : (book.author || "–");
-
-  // Verfügbarkeits-Badge
-  const isAvailable = book.availableCopies > 0
-    || (book.availableCopies === undefined && book.available !== false);
-
-  let availBadge;
-  if (book.availableCopies != null) {
-    if (isAvailable) {
-      availBadge = `<span class="avail-badge available">Verfügbar ${book.availableCopies}/${book.totalCopies || book.availableCopies}</span>`;
-    } else {
-      const freeDate = book.nextAvailable ? ` – frei ab ${formatDate(book.nextAvailable)}` : "";
-      availBadge = `<span class="avail-badge unavailable">Ausgeliehen${freeDate}</span>`;
-    }
-  } else {
-    availBadge = isAvailable
-      ? `<span class="avail-badge available">Verfügbar</span>`
-      : `<span class="avail-badge unavailable">Ausgeliehen</span>`;
+  let authorText = " ";
+  if (book.authors && book.authors.length > 0) {
+    authorText = book.authors
+      .map(a => `${a.firstname || ""} ${a.name || ""}`)
+      .join(", ");
+  } else if (book.author) {
+    authorText = book.author;
   }
 
-  const loanCountBadge = showLoanCount && book.loanCount != null
-    ? `<span class="loan-count-badge" title="Gesamte Ausleihen">${book.loanCount}×</span>`
-    : "";
+  // Verfügbarkeits-Badge
+  // Verfügbarkeit bestimmen
+  let isAvailable;
+
+  if (book.availableCopies != null) {
+    isAvailable = book.availableCopies > 0;
+  } else {
+    isAvailable = book.available !== false;
+  }
+
+  // Badge erzeugen
+  let availBadge;
+
+  if (book.availableCopies == null) {
+    // Altes Modell ohne Kopienzahl
+    availBadge = `<span>${isAvailable ? "Verfügbar" : "Ausgeliehen"}</span>`;
+  } else {
+    // Neues Modell mit Kopienzahl
+    if (isAvailable) {
+      availBadge = `<span>Verfügbar ${book.availableCopies}/${book.totalCopies ?? book.availableCopies}</span>`;
+    } else {
+      const freeDate = book.nextAvailable
+      ? ` – frei ab ${formatDate(book.nextAvailable)}`
+      : "";
+      availBadge = `<span>Ausgeliehen${freeDate}</span>`;
+    }
+  }
+
+  let loanCountBadge = "";
+  if (showLoanCount && book.loanCount != null) {
+    loanCountBadge = ` – ${book.loanCount}× ausgeliehen`;
+  }
+
   const categoryText = getCategoryName(book.categoryId);
 
   return `
     <div class="book-card">
-      <div class="book-card-title">${escHtml(book.title || "Unbekannter Titel")}${loanCountBadge}</div>
+      <div class="book-card-title">${escHtml(book.title)}${loanCountBadge}</div>
       <div class="book-card-meta">
         <div>Autor: ${escHtml(authorText)}</div>
         <div>Kategorie: ${escHtml(categoryText)}</div>
@@ -125,9 +146,7 @@ function bookCardHTML(book, showLoanCount = false) {
       </div>
       <div class="book-card-footer">
         ${availBadge}
-        <button class="btn-sm" onclick="borrowBook('${book.bookId}')" ${isAvailable ? "" : "disabled"}>
-          Ausleihen
-        </button>
+        <button class="btn-sm" onclick="borrowBook('${book.bookId}')" ${isAvailable ? "" : "disabled"}>Ausleihen</button>
       </div>
     </div>`;
 }
@@ -154,20 +173,28 @@ function escHtml(str) {
 async function loadRecommendations() {
   const recBooks = document.getElementById("recBooks");
   const recName  = document.getElementById("recCategoryName");
-  try {
-    const data = await apiFetch("/api/books/recommendations");
-    recName.textContent = data.categoryName || "Alle Kategorien";
 
-    if (!data.books?.length) {
-      recBooks.innerHTML = `<div class="empty-state"><p>Noch keine Bücher vorhanden.</p></div>`;
+  try {
+    // personalisierte Empfehlung laden
+    const data = await apiFetch(`/api/books/recommendations/${CURRENT_USER_ID}`);
+
+    recName.textContent = data.categoryName || "Keine Kategorie";
+
+    if (!data.books || data.books.length === 0) {
+      recBooks.innerHTML = "<p>Noch keine Empfehlungen vorhanden.</p>";
       return;
     }
-    recBooks.innerHTML = data.books.map((b) => bookCardHTML(b, true)).join("");
+
+    recBooks.innerHTML = data.books
+      .map(b => bookCardHTML(b, true))
+      .join("");
+
   } catch (err) {
-    recBooks.innerHTML = `<div class="empty-state"><p>Empfehlungen konnten nicht geladen werden.</p></div>`;
+    recBooks.innerHTML = "<p>Empfehlungen konnten nicht geladen werden.</p>";
     console.error(err);
   }
 }
+
 
 // ─── Bücher browsen ──────────────────────────────────────────────────────────
 
@@ -176,28 +203,35 @@ async function loadRecommendations() {
  * und zeigt sie im Bücher-Raster an.
  */
 async function loadBooks() {
-  const search   = document.getElementById("searchInput").value.trim();
+  const search = document.getElementById("searchInput").value.trim();
   const category = document.getElementById("categoryFilter").value;
   const booksList = document.getElementById("booksList");
 
-  booksList.innerHTML = `<p style="color:#667786">Bücher werden geladen…</p>`;
+  booksList.textContent = "Bücher werden geladen…";
 
-  const params = new URLSearchParams();
-  if (search)   params.set("search", search);
-  if (category) params.set("category", category);
+  let url = "/api/books?";
+  if (search) url += "search=" + search + "&";
+  if (category) url += "category=" + category;
 
   try {
-    const books = await apiFetch(`/api/books?${params}`);
+    const books = await apiFetch(url);
+
     if (!books.length) {
-      booksList.innerHTML = `<div class="empty-state"><p>Keine Bücher gefunden.</p></div>`;
+      booksList.textContent = "Keine Bücher gefunden.";
       return;
     }
-    booksList.innerHTML = books.map((b) => bookCardHTML(b)).join("");
-  } catch (err) {
-    booksList.innerHTML = `<div class="empty-state"><p>Bücher konnten nicht geladen werden.</p></div>`;
-    console.error(err);
+
+    let html = "";
+    for (const b of books) {
+      html += bookCardHTML(b);
+    }
+    booksList.innerHTML = html;
+
+  } catch {
+    booksList.textContent = "Fehler beim Laden.";
   }
 }
+
 
 // ─── Kategorien-Dropdown befüllen ─────────────────────────────────────────────
 
@@ -208,24 +242,32 @@ async function loadCategories() {
   try {
     const cats = await apiFetch("/api/categories");
     allCategories = cats;
-    const filterSel  = document.getElementById("categoryFilter");
+
+    const filterSel = document.getElementById("categoryFilter");
     const bookCatSel = document.getElementById("bookCategory");
 
     cats.sort((a, b) => a.name.localeCompare(b.name));
-    for (const cat of cats) {
-      const opt = new Option(cat.name, cat.categoryId);
-      filterSel.add(opt.cloneNode(true));
-      bookCatSel.add(opt.cloneNode(true));
+
+    for (let c of cats) {
+      const opt = new Option(c.name, c.categoryId);
+      filterSel.add(new Option(c.name, c.categoryId));
+      bookCatSel.add(new Option(c.name, c.categoryId));
     }
+
     renderAdminCategories();
-  } catch (err) {
-    console.error("Kategorien konnten nicht geladen werden:", err);
+  } catch (e) {
+    console.error("Fehler beim Laden der Kategorien");
   }
 }
 
+
 function getCategoryName(categoryId) {
-  if (!categoryId) return "–";
-  return allCategories.find((cat) => cat.categoryId === categoryId)?.name || categoryId;
+  if (!categoryId) return "Unbekannte Kategorie";
+
+  const category = allCategories.find(c => c.categoryId === categoryId);
+  if (category) return category.name;
+
+  return "Unbekannte Kategorie";
 }
 
 // ─── Autoren-Dropdown befüllen ────────────────────────────────────────────────
@@ -237,81 +279,20 @@ async function loadAuthorsDropdown() {
   try {
     const authors = await apiFetch("/api/authors");
     allAuthors = authors;
+
     const sel = document.getElementById("bookAuthors");
     sel.innerHTML = "";
+
     authors.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    for (const a of authors) {
-      sel.add(new Option(`${a.firstname} ${a.name}`, a.authorID || a.authorId));
+
+    for (let a of authors) {
+      const full = ((a.firstname || "") + " " + (a.name || ""));
+      sel.add(new Option(full, a.authorId || a.authorID));
     }
-    renderAdminAuthors();
-  } catch (err) {
-    console.error("Autoren konnten nicht geladen werden:", err);
+
+  } catch (e) {
+    console.error("Fehler beim Laden der Autoren");
   }
-}
-
-function renderAdminAuthors() {
-  const content = document.getElementById("authorsListContent");
-  if (!content) return;
-
-  if (!allAuthors.length) {
-    content.innerHTML = `<div class="empty-state"><p>Noch keine Autoren vorhanden.</p></div>`;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr><th>Vorname</th><th>Nachname</th><th>Aktionen</th></tr>
-        </thead>
-        <tbody>
-          ${allAuthors.map((author) => `
-            <tr>
-              <td>${escHtml(author.firstname || "")}</td>
-              <td>${escHtml(author.name || "")}</td>
-              <td>
-                <div class="td-actions">
-                  <button class="btn-sm btn-outline" onclick="editAuthor('${author.authorID || author.authorId}')">Bearbeiten</button>
-                  <button class="btn-sm btn-danger" onclick="deleteAuthor('${author.authorID || author.authorId}')">Löschen</button>
-                </div>
-              </td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function renderAdminCategories() {
-  const content = document.getElementById("categoriesListContent");
-  if (!content) return;
-
-  if (!allCategories.length) {
-    content.innerHTML = `<div class="empty-state"><p>Noch keine Kategorien vorhanden.</p></div>`;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Aktionen</th></tr>
-        </thead>
-        <tbody>
-          ${allCategories.map((category) => `
-            <tr>
-              <td>${escHtml(category.name || "")}</td>
-              <td>
-                <div class="td-actions">
-                  <button class="btn-sm btn-outline" onclick="editCategory('${category.categoryId}')">Bearbeiten</button>
-                  <button class="btn-sm btn-danger" onclick="deleteCategory('${category.categoryId}')">Löschen</button>
-                </div>
-              </td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>`;
 }
 
 // ─── Aktive Ausleihen ─────────────────────────────────────────────────────────
@@ -321,45 +302,49 @@ function renderAdminCategories() {
  */
 async function loadAllLoans() {
   const content = document.getElementById("loansContent");
+
   try {
     const loans = await apiFetch("/api/loans");
+
     if (!loans.length) {
-      content.innerHTML = `<div class="empty-state"><p>Derzeit keine aktiven Ausleihen.</p></div>`;
+      content.innerHTML = "Derzeit keine aktiven Ausleihen.";
       return;
     }
 
     const now = Date.now();
-    content.innerHTML = `<div class="loans-list">${
-      loans.map((loan) => {
-        const due     = new Date(loan.dueDate);
-        const overdue = due < now;
-        return `
-          <div class="loan-item${overdue ? " overdue" : ""}">
-            <div>
-              <div class="loan-item-title">${escHtml(loan.book?.title || "Unbekanntes Buch")}</div>
-              <div class="loan-item-due${overdue ? " overdue-text" : ""}">
-                Fällig: ${formatDate(loan.dueDate)}${overdue ? " – ÜBERFÄLLIG" : ""}
-              </div>
-              <div style="font-size:13px;color:#667786">
-                Ausgeliehen: ${formatDate(loan.borrowedAt)}
-              </div>
+    let html = "";
+
+    for (let loan of loans) {
+      const due = new Date(loan.dueDate);
+      const overdue = due < now;
+
+      html += `
+        <div class="loan-item${overdue ? " overdue" : ""}">
+          <div>
+            <div class="loan-item-title">
+              ${escHtml(loan.book?.title)}
             </div>
-            <div>
-              <button class="btn-sm btn-outline" onclick="returnBook('${loan.loanId}')">
-                Zurückgeben
-              </button>
+            <div class="loan-item-due${overdue ? " overdue-text" : ""}">
+              Fällig: ${formatDate(loan.dueDate)}${overdue ? " – ÜBERFÄLLIG" : ""}
             </div>
-          </div>`;
-      }).join("")
-    }</div>`;
-  } catch (err) {
-    content.innerHTML = `<div class="empty-state"><p>Ausleihen konnten nicht geladen werden.</p></div>`;
-    console.error(err);
+            <div style="font-size:13px;color:#667786">
+              Ausgeliehen: ${formatDate(loan.borrowedAt)}
+            </div>
+          </div>
+          <div>
+            <button class="btn-sm btn-outline" onclick="returnBook('${loan.loanId}')">Zurückgeben</button>
+          </div>
+        </div>
+      `;
+    }
+
+    content.innerHTML = `<div class="loans-list">${html}</div>`;
+
+  } catch (e) {
+    content.innerHTML = "Ausleihen konnten nicht geladen werden.";
+    console.error(e);
   }
 }
-
-// ─── Buch ausleihen ───────────────────────────────────────────────────────────
-
 /**
  * Leiht ein Buch aus und aktualisiert die Ansicht.
  * @param {string} bookId
@@ -368,16 +353,18 @@ async function borrowBook(bookId) {
   try {
     await apiFetch("/api/loans", {
       method: "POST",
-      body: JSON.stringify({ bookId }),
+      body: JSON.stringify({ bookId })
     });
     showToast("Buch erfolgreich ausgeliehen!", "success");
     loadBooks();
     loadAllLoans();
     loadRecommendations();
-  } catch (err) {
-    showToast(err.message || "Ausleihe fehlgeschlagen.", "error");
+
+  } catch (e) {
+    showToast("Ausleihe fehlgeschlagen.", "error");
   }
 }
+
 
 // ─── Buch zurückgeben ─────────────────────────────────────────────────────────
 
@@ -387,15 +374,21 @@ async function borrowBook(bookId) {
  */
 async function returnBook(loanId) {
   try {
-    await apiFetch(`/api/loans/${loanId}/return`, { method: "POST" });
+    await apiFetch(`/api/loans/${loanId}/return`, {
+      method: "POST"
+    });
+
     showToast("Buch erfolgreich zurückgegeben.", "success");
+
     loadBooks();
     loadAllLoans();
     loadRecommendations();
-  } catch (err) {
-    showToast(err.message || "Rückgabe fehlgeschlagen.", "error");
+
+  } catch (e) {
+    showToast("Rückgabe fehlgeschlagen.", "error");
   }
 }
+
 
 // ─── Admin: Buch-Formular ─────────────────────────────────────────────────────
 
@@ -404,34 +397,30 @@ async function returnBook(loanId) {
  * @param {object} book
  */
 function editBook(book) {
-  document.getElementById("editBookId").value     = book.bookId;
-  document.getElementById("bookTitle").value      = book.title || "";
-  document.getElementById("bookIsbn").value       = book.isbn  || "";
-  document.getElementById("bookYear").value       = book.year  || "";
-  document.getElementById("bookAvailable").value  = book.availableCopies ?? 1;
-  document.getElementById("bookTotal").value      = book.totalCopies    ?? 1;
-  document.getElementById("bookFormTitle").textContent = "Buch bearbeiten";
-  document.getElementById("bookSubmitBtn").textContent = "Änderungen speichern";
-  document.getElementById("bookCancelBtn").hidden = false;
+  document.getElementById("editBookId").value = book.bookId;
+  document.getElementById("bookTitle").value  = book.title || "";
+  document.getElementById("bookIsbn").value   = book.isbn  || "";
+  document.getElementById("bookYear").value   = book.year  || "";
+  document.getElementById("bookTotal").value  = book.totalCopies ?? 1;
 
   // Kategorie setzen
   const catSel = document.getElementById("bookCategory");
-  for (const opt of catSel.options) {
+  for (let opt of catSel.options) {
     opt.selected = opt.value === (book.categoryId || "");
   }
 
   // Autoren setzen
-  const authorIds = (book.authors || []).map((a) => a.authorId);
-  const authSel   = document.getElementById("bookAuthors");
-  for (const opt of authSel.options) {
+  const authorIds = (book.authors || []).map(a => a.authorId);
+  const authSel = document.getElementById("bookAuthors");
+  for (let opt of authSel.options) {
     opt.selected = authorIds.includes(opt.value);
   }
 
-  // Zur Admin-Sektion scrollen und Bücher-Tab aktivieren
   document.getElementById("adminSection").open = true;
   activateAdminTab("adminBooks");
   document.getElementById("bookTitle").focus();
 }
+
 
 /** Setzt das Buch-Formular zurück. */
 function resetBookForm() {
@@ -448,154 +437,40 @@ document.getElementById("bookCancelBtn").addEventListener("click", resetBookForm
 document.getElementById("bookForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const bookId = document.getElementById("editBookId").value;
-
-  const authorSel = document.getElementById("bookAuthors");
-  const authorIds = Array.from(authorSel.selectedOptions).map((o) => o.value);
-
+  const authorIds = Array.from(
+    document.getElementById("bookAuthors").selectedOptions
+  ).map(o => o.value);
   const payload = {
-    title:           document.getElementById("bookTitle").value.trim(),
-    isbn:            document.getElementById("bookIsbn").value.trim(),
-    year:            Number(document.getElementById("bookYear").value),
-    categoryId:      document.getElementById("bookCategory").value,
+    title: document.getElementById("bookTitle").value.trim(),
+    isbn: document.getElementById("bookIsbn").value.trim(),
+    year: Number(document.getElementById("bookYear").value),
+    categoryId: document.getElementById("bookCategory").value,
     availableCopies: Number(document.getElementById("bookAvailable").value),
-    totalCopies:     Number(document.getElementById("bookTotal").value),
-    authorIds,
+    totalCopies: Number(document.getElementById("bookTotal").value),
+    authorIds
   };
-
   try {
     if (bookId) {
-      await apiFetch(`/api/books/${bookId}`, { method: "PUT", body: JSON.stringify(payload) });
+      await apiFetch(`/api/books/${bookId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
       showFormMsg("bookFormMsg", "Buch erfolgreich aktualisiert.", "success");
     } else {
-      await apiFetch("/api/books", { method: "POST", body: JSON.stringify(payload) });
+      await apiFetch("/api/books", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
       showFormMsg("bookFormMsg", "Buch erfolgreich angelegt.", "success");
     }
     resetBookForm();
     loadBooks();
     loadRecommendations();
     loadAdminBookList();
-  } catch (err) {
-    showFormMsg("bookFormMsg", err.message || "Fehler beim Speichern.", "error");
+  } catch (e) {
+    showFormMsg("bookFormMsg", "Fehler beim Speichern.", "error");
   }
 });
-
-// ─── Admin: Autoren-Formular ──────────────────────────────────────────────────
-
-document.getElementById("authorForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const payload = {
-    firstname: document.getElementById("authorFirstname").value.trim(),
-    name:      document.getElementById("authorName").value.trim(),
-  };
-  try {
-    await apiFetch("/api/authors", { method: "POST", body: JSON.stringify(payload) });
-    showFormMsg("authorFormMsg", "Autor erfolgreich angelegt.", "success");
-    document.getElementById("authorForm").reset();
-    loadAuthorsDropdown();
-  } catch (err) {
-    showFormMsg("authorFormMsg", err.message || "Fehler beim Speichern.", "error");
-  }
-});
-
-async function editAuthor(authorId) {
-  const author = allAuthors.find((entry) => (entry.authorID || entry.authorId) === authorId);
-  if (!author) return;
-
-  const firstname = prompt("Vorname:", author.firstname || "");
-  if (firstname === null) return;
-
-  const name = prompt("Nachname:", author.name || "");
-  if (name === null) return;
-
-  try {
-    await apiFetch(`/api/authors/${authorId}`, {
-      method: "PUT",
-      body: JSON.stringify({ firstname, name }),
-    });
-    showToast("Autor aktualisiert.", "success");
-    loadAuthorsDropdown();
-    loadBooks();
-    loadRecommendations();
-    loadAdminBookList();
-  } catch (err) {
-    showToast(err.message || "Autor konnte nicht aktualisiert werden.", "error");
-  }
-}
-
-async function deleteAuthor(authorId) {
-  if (!confirm("Autor wirklich löschen? Die Verknüpfung zu Büchern wird entfernt.")) return;
-
-  try {
-    await apiFetch(`/api/authors/${authorId}`, { method: "DELETE" });
-    showToast("Autor gelöscht.", "success");
-    loadAuthorsDropdown();
-    loadBooks();
-    loadRecommendations();
-    loadAdminBookList();
-  } catch (err) {
-    showToast(err.message || "Autor konnte nicht gelöscht werden.", "error");
-  }
-}
-
-// ─── Admin: Kategorien-Formular ───────────────────────────────────────────────
-
-document.getElementById("categoryForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const payload = { name: document.getElementById("categoryName").value.trim() };
-  try {
-    await apiFetch("/api/categories", { method: "POST", body: JSON.stringify(payload) });
-    showFormMsg("categoryFormMsg", "Kategorie erfolgreich angelegt.", "success");
-    document.getElementById("categoryForm").reset();
-    // Dropdowns neu laden
-    document.getElementById("categoryFilter").innerHTML = '<option value="">Alle Kategorien</option>';
-    document.getElementById("bookCategory").innerHTML   = '<option value="">Keine Kategorie</option>';
-    loadCategories();
-  } catch (err) {
-    showFormMsg("categoryFormMsg", err.message || "Fehler beim Speichern.", "error");
-  }
-});
-
-async function editCategory(categoryId) {
-  const category = allCategories.find((entry) => entry.categoryId === categoryId);
-  if (!category) return;
-
-  const name = prompt("Kategoriename:", category.name || "");
-  if (name === null) return;
-
-  try {
-    await apiFetch(`/api/categories/${categoryId}`, {
-      method: "PUT",
-      body: JSON.stringify({ name }),
-    });
-    showToast("Kategorie aktualisiert.", "success");
-    document.getElementById("categoryFilter").innerHTML = '<option value="">Alle Kategorien</option>';
-    document.getElementById("bookCategory").innerHTML = '<option value="">Keine Kategorie</option>';
-    loadCategories();
-    loadBooks();
-    loadRecommendations();
-    loadAdminBookList();
-  } catch (err) {
-    showToast(err.message || "Kategorie konnte nicht aktualisiert werden.", "error");
-  }
-}
-
-async function deleteCategory(categoryId) {
-  if (!confirm("Kategorie wirklich löschen? Bücher behalten dann nur noch die Kategorie-ID.")) return;
-
-  try {
-    await apiFetch(`/api/categories/${categoryId}`, { method: "DELETE" });
-    showToast("Kategorie gelöscht.", "success");
-    document.getElementById("categoryFilter").innerHTML = '<option value="">Alle Kategorien</option>';
-    document.getElementById("bookCategory").innerHTML = '<option value="">Keine Kategorie</option>';
-    loadCategories();
-    loadBooks();
-    loadRecommendations();
-    loadAdminBookList();
-  } catch (err) {
-    showToast(err.message || "Kategorie konnte nicht gelöscht werden.", "error");
-  }
-}
-
 // ─── Admin: Bücher-Liste ──────────────────────────────────────────────────────
 
 /**
@@ -604,57 +479,47 @@ async function deleteCategory(categoryId) {
  */
 async function loadAdminBookList() {
   const content = document.getElementById("adminBookListContent");
-  content.innerHTML = `<p style="color:#667786">Wird geladen…</p>`;
+  content.textContent = "Wird geladen…";
+
   try {
     const books = await apiFetch("/api/books");
+
     if (!books.length) {
-      content.innerHTML = `<div class="empty-state"><p>Noch keine Bücher vorhanden.</p></div>`;
+      content.textContent = "Noch keine Bücher vorhanden.";
       return;
     }
 
-    // Bücher in window speichern für editBook()-Zugriff
     window._adminBooks = {};
-    for (const b of books) window._adminBooks[b.bookId] = b;
+    for (let b of books) window._adminBooks[b.bookId] = b;
 
-    content.innerHTML = `
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Titel</th>
-              <th>Autor</th>
-              <th>ISBN</th>
-              <th>Jahr</th>
-              <th>Verfügbar</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${books.map((b) => {
-              const authorText = b.authors?.length
-                ? b.authors.map((a) => `${a.firstname || ""} ${a.name || ""}`.trim()).join(", ")
-                : (b.author || "–");
-              return `
-                <tr>
-                  <td>${escHtml(b.title || "")}</td>
-                  <td>${escHtml(authorText)}</td>
-                  <td>${escHtml(b.isbn || "")}</td>
-                  <td>${b.year || "–"}</td>
-                  <td>${b.availableCopies ?? "–"}/${b.totalCopies ?? "–"}</td>
-                  <td>
-                    <div class="td-actions">
-                      <button class="btn-sm btn-outline" onclick="editBook(window._adminBooks['${b.bookId}'])">Bearbeiten</button>
-                      <button class="btn-sm btn-danger"  onclick="deleteBook('${b.bookId}')">Löschen</button>
-                    </div>
-                  </td>
-                </tr>`;
-            }).join("")}
-          </tbody>
-        </table>
-      </div>`;
-  } catch (err) {
-    content.innerHTML = `<div class="empty-state"><p>Bücher konnten nicht geladen werden.</p></div>`;
-    console.error(err);
+    let html = "<table><thead><tr>" +
+      "<th>Titel</th><th>Autor</th><th>ISBN</th><th>Jahr</th><th>Verfügbar</th><th>Aktionen</th>" +
+      "</tr></thead><tbody>";
+
+    for (let b of books) {
+      const authorText = b.authors?.length
+        ? b.authors.map(a => `${a.firstname || ""} ${a.name || ""}`.trim()).join(", ")
+        : "–";
+
+      html += `
+        <tr>
+          <td>${escHtml(b.title || "")}</td>
+          <td>${escHtml(authorText)}</td>
+          <td>${escHtml(b.isbn || "")}</td>
+          <td>${b.year || "–"}</td>
+          <td>${b.availableCopies ?? "–"}/${b.totalCopies ?? "–"}</td>
+          <td>
+            <button onclick="editBook(window._adminBooks['${b.bookId}'])">Bearbeiten</button>
+            <button onclick="deleteBook('${b.bookId}')">Löschen</button>
+          </td>
+        </tr>`;
+    }
+
+    html += "</tbody></table>";
+    content.innerHTML = html;
+
+  } catch (e) {
+    content.textContent = "Bücher konnten nicht geladen werden.";
   }
 }
 
@@ -663,52 +528,25 @@ async function loadAdminBookList() {
  * @param {string} bookId
  */
 async function deleteBook(bookId) {
-  if (!confirm("Buch wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.")) return;
+  if (!confirm("Buch wirklich löschen?")) return;
+
   try {
     await apiFetch(`/api/books/${bookId}`, { method: "DELETE" });
     showToast("Buch gelöscht.", "success");
     loadBooks();
     loadAdminBookList();
     loadRecommendations();
-  } catch (err) {
-    showToast(err.message || "Löschen fehlgeschlagen.", "error");
+  } catch (e) {
+    showToast("Löschen fehlgeschlagen.", "error");
   }
 }
-
-// ─── Admin-Tab-Navigation ──────────────────────────────────────────────────────
-
-/**
- * Aktiviert einen Admin-Tab und deaktiviert alle anderen.
- * @param {string} tabId
- */
-function activateAdminTab(tabId) {
-  document.querySelectorAll(".admin-tabs .tab-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.tab === tabId);
-  });
-  document.querySelectorAll(".admin-inner .tab-content").forEach((panel) => {
-    panel.classList.toggle("active", panel.id === tabId);
-  });
-  // Bücherliste bei Tab-Wechsel nachladen
-  if (tabId === "adminBookList") loadAdminBookList();
-}
-
-document.querySelectorAll(".admin-tabs .tab-btn").forEach((btn) => {
-  btn.addEventListener("click", () => activateAdminTab(btn.dataset.tab));
-});
-
 // ─── Suche ────────────────────────────────────────────────────────────────────
 
-document.getElementById("searchBtn").addEventListener("click", loadBooks);
-document.getElementById("searchInput").addEventListener("keydown", (e) => {
+searchBtn.onclick = loadBooks;
+
+searchInput.onkeydown = (e) => {
   if (e.key === "Enter") loadBooks();
-});
-
-// ─── Admin-Bereich: Daten nachladen wenn aufgeklappt ─────────────────────────
-
-document.getElementById("adminSection").addEventListener("toggle", (e) => {
-  if (e.target.open) loadAdminBookList();
-});
-
+};
 // ─── Initialisierung ──────────────────────────────────────────────────────────
 
 /**
@@ -717,9 +555,12 @@ document.getElementById("adminSection").addEventListener("toggle", (e) => {
 async function init() {
   await loadCategories();
   await loadAuthorsDropdown();
+  const user = await apiFetch("/api/users/default");
+  CURRENT_USER_ID = user.userId;
   loadRecommendations();
   loadBooks();
   loadAllLoans();
+  loadAdminBookList();
 }
 
 init();

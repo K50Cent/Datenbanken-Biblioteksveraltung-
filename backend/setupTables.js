@@ -10,6 +10,9 @@
 
 import { CreateTableCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
 import { client } from "./dynamodb.js";
+import { PutCommand } from "@aws-sdk/lib-dynamodb";
+import crypto from "node:crypto";
+import { docClient } from "./dynamodb.js";
 
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
@@ -168,6 +171,39 @@ async function createLoansTable() {
   });
 }
 
+/**
+ * Users-Tabelle
+ */
+async function createUsersTable() {
+  await createTable("Users", {
+    AttributeDefinitions: [
+      { AttributeName: "usernameKey", AttributeType: "S" },
+    ],
+    KeySchema: [
+      { AttributeName: "usernameKey", KeyType: "HASH" },
+    ],
+    BillingMode: "PAY_PER_REQUEST",
+  });
+}
+
+async function createDefaultUser() {
+  const user = {
+    usernameKey: crypto.randomUUID(),
+    name: "Demo User",
+    createdAt: new Date().toISOString(),
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: "Users",
+      Item: user,
+    })
+  );
+
+  console.log("  ✓ Default-User angelegt:", user.usernameKey);
+}
+
+
 // ─── Hauptfunktion ─────────────────────────────────────────────────────────────
 
 async function setupAllTables() {
@@ -179,6 +215,8 @@ async function setupAllTables() {
   await createBookAuthorsTable();
   await createCategoriesTable();
   await createLoansTable();
+  await createUsersTable();
+  await createDefaultUser();
 
   console.log("─".repeat(40));
   console.log("Setup abgeschlossen.");
