@@ -261,6 +261,11 @@ async function loadCategories() {
 }
 
 
+/**
+ * Gibt den Kategorienamen zur übergebenen ID zurück.
+ * @param {string} categoryId
+ * @returns {string}
+ */
 function getCategoryName(categoryId) {
   if (!categoryId) return "Unbekannte Kategorie";
 
@@ -298,13 +303,16 @@ async function loadAuthorsDropdown() {
 // ─── Aktive Ausleihen ─────────────────────────────────────────────────────────
 
 /**
- * Lädt alle aktiven Ausleihen und zeigt sie mit Rückgabe-Button an.
+ * Lädt aktive Ausleihen, optional gefiltert nach Autorname.
+ * Nutzt die Vierer-Kette: Loans → Books → BookAuthors → Authors.
  */
 async function loadAllLoans() {
   const content = document.getElementById("loansContent");
+  const authorQuery = document.getElementById("loansAuthorSearch")?.value.trim() || "";
+  const url = authorQuery ? `/api/loans?author=${encodeURIComponent(authorQuery)}` : "/api/loans";
 
   try {
-    const loans = await apiFetch("/api/loans");
+    const loans = await apiFetch(url);
 
     if (!loans.length) {
       content.innerHTML = "Derzeit keine aktiven Ausleihen.";
@@ -353,7 +361,7 @@ async function borrowBook(bookId) {
   try {
     await apiFetch("/api/loans", {
       method: "POST",
-      body: JSON.stringify({ bookId })
+      body: JSON.stringify({ bookId, userId: CURRENT_USER_ID })
     });
     showToast("Buch erfolgreich ausgeliehen!", "success");
     loadBooks();
@@ -546,6 +554,12 @@ searchBtn.onclick = loadBooks;
 
 searchInput.onkeydown = (e) => {
   if (e.key === "Enter") loadBooks();
+};
+
+document.getElementById("loansSearchBtn").onclick = loadAllLoans;
+
+document.getElementById("loansAuthorSearch").onkeydown = (e) => {
+  if (e.key === "Enter") loadAllLoans();
 };
 // ─── Initialisierung ──────────────────────────────────────────────────────────
 

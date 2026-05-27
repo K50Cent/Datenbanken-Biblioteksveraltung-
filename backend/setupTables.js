@@ -186,6 +186,10 @@ async function createUsersTable() {
   });
 }
 
+/**
+ * Legt einen Demo-Benutzer in der Users-Tabelle an.
+ * Wird einmalig beim Setup ausgeführt, damit das Frontend sofort einen Benutzer hat.
+ */
 async function createDefaultUser() {
   const user = {
     usernameKey: crypto.randomUUID(),
@@ -206,6 +210,10 @@ async function createDefaultUser() {
 
 // ─── Hauptfunktion ─────────────────────────────────────────────────────────────
 
+/**
+ * Erstellt alle DynamoDB-Tabellen und legt den Demo-Benutzer an.
+ * Bereits existierende Tabellen werden übersprungen.
+ */
 async function setupAllTables() {
   console.log("Bibliotheksverwaltung – Tabellen-Setup");
   console.log("─".repeat(40));

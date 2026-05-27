@@ -57,6 +57,13 @@ router.post("/", async (req, res) => {
   }
 });
 
+// ─── Kategorie aktualisieren ──────────────────────────────────────────────────
+
+/**
+ * PUT /api/categories/:id  [Admin-Bereich]
+ * Aktualisiert den Namen einer bestehenden Kategorie.
+ * @param {string} req.params.id - Die categoryId der zu ändernden Kategorie
+ */
 router.put("/:id", async (req, res) => {
   const categoryId = req.params.id;
   const name = trimValue(req.body.name);
@@ -88,6 +95,13 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// ─── Kategorie löschen ────────────────────────────────────────────────────────
+
+/**
+ * DELETE /api/categories/:id  [Admin-Bereich]
+ * Löscht eine Kategorie anhand ihrer ID.
+ * @param {string} req.params.id - Die categoryId der zu löschenden Kategorie
+ */
 router.delete("/:id", async (req, res) => {
   const categoryId = req.params.id;
 

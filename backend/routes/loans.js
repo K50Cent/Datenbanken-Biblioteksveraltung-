@@ -9,7 +9,13 @@ import crypto from "node:crypto";
 import express from "express";
 import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import { booksTable, loansTable, scanAll } from "../helpers.js";
+import {
+  booksTable,
+  authorsTable,
+  bookAuthorsTable,
+  loansTable,
+  scanAll,
+} from "../helpers.js";
 
 const router = express.Router();
 
@@ -18,12 +24,12 @@ const router = express.Router();
 /**
  * POST /api/loans
  * Leiht ein Buch aus. Laufzeit: 14 Tage ab heute (dueDate).
- * Unterstützt beide Datenbankschemas:
- *   - Neu: availableCopies (atomares Dekrement mit ConditionExpression)
- *   - Legacy: available (Boolean, wird auf false gesetzt)
+ * Pflichtfeld: bookId
+ * Optional: userId – verknüpft die Ausleihe mit einem Benutzer (für Empfehlungen)
  */
 router.post("/", async (req, res) => {
   const bookId = String(req.body.bookId || "").trim();
+  const userId = String(req.body.userId || "").trim() || null;
 
   if (!bookId) {
     return res.status(400).json({ message: "bookId ist ein Pflichtfeld." });
@@ -38,7 +44,6 @@ router.post("/", async (req, res) => {
     const book = bookResult.Item;
 
     if (book.availableCopies != null) {
-      // Neues Schema: atomares Dekrement mit Prüfung ob Exemplare verfügbar
       try {
         await docClient.send(
           new UpdateCommand({
@@ -56,7 +61,6 @@ router.post("/", async (req, res) => {
         throw condErr;
       }
     } else {
-      // Legacy-Schema: available Boolean
       if (book.available === false) {
         return res.status(409).json({ message: "Alle Exemplare dieses Buches sind aktuell ausgeliehen." });
       }
@@ -70,7 +74,6 @@ router.post("/", async (req, res) => {
       );
     }
 
-    // Ausleihe-Datensatz anlegen (ohne userId – kein Login erforderlich)
     const now     = new Date();
     const dueDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
     const loan    = {
@@ -79,6 +82,9 @@ router.post("/", async (req, res) => {
       borrowedAt: now.toISOString(),
       dueDate,
     };
+
+    // userId nur speichern wenn vorhanden
+    if (userId) loan.userId = userId;
 
     await docClient.send(new PutCommand({ TableName: loansTable, Item: loan }));
     return res.status(201).json({ message: "Buch erfolgreich ausgeliehen.", loan });
@@ -95,15 +101,53 @@ router.post("/", async (req, res) => {
  * Gibt alle aktiven (nicht zurückgegebenen) Ausleihen zurück.
  * Jede Ausleihe wird mit dem Buchtitel angereichert.
  * Sortiert nach Fälligkeitsdatum aufsteigend.
+ *
+ * Optionaler Filter:
+ *   ?author= → Suche nach Autorname (Vor- oder Nachname)
+ *              Vierer-Kette: Loans → Books → BookAuthors → Authors
  */
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
+  const { author } = req.query;
+
   try {
     const loans = await scanAll(loansTable);
     const activeLoans = loans.filter((l) => !l.returnedAt);
 
+    // Autorenfilter: Vierer-Kette Loans → Books → BookAuthors → Authors
+    let filteredBookIds = null;
+    if (author) {
+      const q = author.toLowerCase();
+      const [allAuthors, allBookAuthors] = await Promise.all([
+        scanAll(authorsTable),
+        scanAll(bookAuthorsTable),
+      ]);
+
+      // Schritt 1: passende Autoren-IDs finden
+      const matchingAuthorIds = new Set(
+        allAuthors
+          .filter((a) =>
+            (a.name      || "").toLowerCase().includes(q) ||
+            (a.firstname || "").toLowerCase().includes(q) ||
+            `${a.firstname || ""} ${a.name || ""}`.toLowerCase().includes(q),
+          )
+          .map((a) => a.authorID || a.authorId),
+      );
+
+      // Schritt 2: zugehörige Buch-IDs ermitteln
+      filteredBookIds = new Set(
+        allBookAuthors
+          .filter((ba) => matchingAuthorIds.has(ba.authorId))
+          .map((ba) => ba.bookId),
+      );
+    }
+
+    const relevantLoans = filteredBookIds
+      ? activeLoans.filter((l) => filteredBookIds.has(l.bookId))
+      : activeLoans;
+
     // Buchtitel zu jeder Ausleihe laden
     const enriched = await Promise.all(
-      activeLoans.map(async (loan) => {
+      relevantLoans.map(async (loan) => {
         const bookResult = await docClient.send(
           new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } }),
         );
@@ -147,7 +191,6 @@ router.post("/:id/return", async (req, res) => {
       return res.status(409).json({ message: "Dieses Buch wurde bereits zurückgegeben." });
     }
 
-    // Ausleihe als zurückgegeben markieren
     await docClient.send(
       new UpdateCommand({
         TableName:                 loansTable,
@@ -157,7 +200,6 @@ router.post("/:id/return", async (req, res) => {
       }),
     );
 
-    // Verfügbarkeit des Buches wiederherstellen
     const returnedBook = await docClient.send(
       new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } }),
     );
