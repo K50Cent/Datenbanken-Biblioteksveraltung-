@@ -20,6 +20,10 @@
     .section-title span {
       color: #237a57;
     }
+    .admin-tabs { display:flex; gap:0; margin-bottom:24px; border-bottom:2px solid #e1e4e8; }
+    .admin-tab-btn { padding:8px 18px; border:none; background:none; cursor:pointer; font-size:14px; color:#586069; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .15s; }
+    .admin-tab-btn:hover { color:#237a57; }
+    .admin-tab-btn.active { color:#237a57; border-bottom-color:#237a57; font-weight:600; }
   </style>
 </head>
 <body>
@@ -83,69 +87,136 @@
   </section>
 
   <!-- ─── Admin-Bereich ───────────────────────── -->
-<section id="adminSection" style="background:#fff; border:1px solid #d8dee4; border-radius:6px; padding:18px; margin-bottom:36px;">
+  <section id="adminSection" style="background:#fff; border:1px solid #d8dee4; border-radius:6px; padding:18px; margin-bottom:36px;">
 
-  <h2 style="margin-bottom:18px">Admin-Bereich</h2>
+    <h2 style="margin-bottom:18px">Admin-Bereich</h2>
 
-  <h3 id="bookFormTitle">Neues Buch anlegen</h3>
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" id="tabBtnBooks"      onclick="activateAdminTab('adminBooks')">Bücher</button>
+      <button class="admin-tab-btn"        id="tabBtnAuthors"    onclick="activateAdminTab('adminAuthors')">Autoren</button>
+      <button class="admin-tab-btn"        id="tabBtnCategories" onclick="activateAdminTab('adminCategories')">Kategorien</button>
+    </div>
 
-  <form id="bookForm">
-    <input type="hidden" id="editBookId">
+    <!-- Tab: Bücher -->
+    <div id="adminBooks">
+      <h3 id="bookFormTitle">Neues Buch anlegen</h3>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="bookTitle">Titel *</label>
-        <input id="bookTitle" type="text" required>
-      </div>
-      <div class="form-group">
-        <label for="bookIsbn">ISBN *</label>
-        <input id="bookIsbn" type="text" required>
+      <form id="bookForm">
+        <input type="hidden" id="editBookId">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bookTitle">Titel *</label>
+            <input id="bookTitle" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="bookIsbn">ISBN *</label>
+            <input id="bookIsbn" type="text" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bookYear">Jahr *</label>
+            <input id="bookYear" type="number" required>
+          </div>
+          <div class="form-group">
+            <label for="bookCategory">Kategorie</label>
+            <select id="bookCategory">
+              <option value="">Keine Kategorie</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bookAvailable">Verfügbare Exemplare</label>
+            <input id="bookAvailable" type="number" min="0" value="1">
+          </div>
+          <div class="form-group">
+            <label for="bookTotal">Gesamtanzahl Exemplare</label>
+            <input id="bookTotal" type="number" min="1" value="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="bookAuthors">Autoren (Mehrfachauswahl möglich)</label>
+          <select id="bookAuthors" multiple></select>
+        </div>
+
+        <div id="bookFormMsg"></div>
+
+        <div class="form-actions" style="margin-top:12px">
+          <button type="submit" id="bookSubmitBtn">Buch speichern</button>
+          <button type="button" id="bookCancelBtn" hidden class="btn-outline">Abbrechen</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:28px">Alle Bücher</h3>
+      <div id="adminBookListContent">
+        <p style="color:#667786">Wird geladen…</p>
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="bookYear">Jahr *</label>
-        <input id="bookYear" type="number" required>
-      </div>
-      <div class="form-group">
-        <label for="bookCategory">Kategorie</label>
-        <select id="bookCategory">
-          <option value="">Keine Kategorie</option>
-        </select>
+    <!-- Tab: Autoren -->
+    <div id="adminAuthors" hidden>
+      <h3 id="authorFormTitle">Neuen Autor anlegen</h3>
+
+      <form id="authorForm">
+        <input type="hidden" id="editAuthorId">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="authorFirstname">Vorname</label>
+            <input id="authorFirstname" type="text" placeholder="z. B. Johann Wolfgang">
+          </div>
+          <div class="form-group">
+            <label for="authorName">Nachname *</label>
+            <input id="authorName" type="text" required placeholder="z. B. Goethe">
+          </div>
+        </div>
+
+        <div id="authorFormMsg"></div>
+
+        <div class="form-actions" style="margin-top:12px">
+          <button type="submit" id="authorSubmitBtn">Autor speichern</button>
+          <button type="button" id="authorCancelBtn" hidden class="btn-outline">Abbrechen</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:28px">Alle Autoren</h3>
+      <div id="adminAuthorListContent">
+        <p style="color:#667786">Wird geladen…</p>
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="bookAvailable">Verfügbare Exemplare</label>
-        <input id="bookAvailable" type="number" min="0" value="1">
+    <!-- Tab: Kategorien -->
+    <div id="adminCategories" hidden>
+      <h3 id="categoryFormTitle">Neue Kategorie anlegen</h3>
+
+      <form id="categoryForm">
+        <input type="hidden" id="editCategoryId">
+
+        <div class="form-group">
+          <label for="categoryName">Name *</label>
+          <input id="categoryName" type="text" required placeholder="z. B. Roman">
+        </div>
+
+        <div id="categoryFormMsg"></div>
+
+        <div class="form-actions" style="margin-top:12px">
+          <button type="submit" id="categorySubmitBtn">Kategorie speichern</button>
+          <button type="button" id="categoryCancelBtn" hidden class="btn-outline">Abbrechen</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:28px">Alle Kategorien</h3>
+      <div id="adminCategoryListContent">
+        <p style="color:#667786">Wird geladen…</p>
       </div>
-      <div class="form-group">
-        <label for="bookTotal">Gesamtanzahl Exemplare</label>
-        <input id="bookTotal" type="number" min="1" value="1">
-      </div>
     </div>
 
-    <div class="form-group">
-      <label for="bookAuthors">Autoren (Mehrfachauswahl möglich)</label>
-      <select id="bookAuthors" multiple></select>
-    </div>
-
-    <div id="bookFormMsg"></div>
-
-    <div class="form-actions" style="margin-top:12px">
-      <button type="submit" id="bookSubmitBtn">Buch speichern</button>
-      <button type="button" id="bookCancelBtn" hidden class="btn-outline">Abbrechen</button>
-    </div>
-  </form>
-
-  <h3 style="margin-top:28px">Alle Bücher</h3>
-  <div id="adminBookListContent">
-    <p style="color:#667786">Wird geladen…</p>
-  </div>
-
-</section>
+  </section>
 
 </div>
 

@@ -398,6 +398,24 @@ async function returnBook(loanId) {
 }
 
 
+// ─── Admin: Tab-Navigation ────────────────────────────────────────────────────
+
+/**
+ * Wechselt den aktiven Tab im Admin-Bereich.
+ * @param {"adminBooks"|"adminAuthors"|"adminCategories"} tabId
+ */
+function activateAdminTab(tabId) {
+  const tabs = ["adminBooks", "adminAuthors", "adminCategories"];
+  const btnIds = { adminBooks: "tabBtnBooks", adminAuthors: "tabBtnAuthors", adminCategories: "tabBtnCategories" };
+
+  for (const id of tabs) {
+    const panel = document.getElementById(id);
+    if (panel) panel.hidden = (id !== tabId);
+    const btn = document.getElementById(btnIds[id]);
+    if (btn) btn.classList.toggle("active", id === tabId);
+  }
+}
+
 // ─── Admin: Buch-Formular ─────────────────────────────────────────────────────
 
 /**
@@ -548,6 +566,223 @@ async function deleteBook(bookId) {
     showToast("Löschen fehlgeschlagen.", "error");
   }
 }
+// ─── Admin: Autoren ───────────────────────────────────────────────────────────
+
+/**
+ * Füllt das Autoren-Formular zum Bearbeiten eines vorhandenen Autors vor.
+ * @param {object} author
+ */
+function editAuthor(author) {
+  document.getElementById("editAuthorId").value    = author.authorID || author.authorId;
+  document.getElementById("authorFirstname").value = author.firstname || "";
+  document.getElementById("authorName").value      = author.name || "";
+  document.getElementById("authorFormTitle").textContent = "Autor bearbeiten";
+  document.getElementById("authorSubmitBtn").textContent  = "Änderungen speichern";
+  document.getElementById("authorCancelBtn").hidden       = false;
+  activateAdminTab("adminAuthors");
+  document.getElementById("authorName").focus();
+}
+
+/** Setzt das Autoren-Formular zurück. */
+function resetAuthorForm() {
+  document.getElementById("authorForm").reset();
+  document.getElementById("editAuthorId").value           = "";
+  document.getElementById("authorFormTitle").textContent  = "Neuen Autor anlegen";
+  document.getElementById("authorSubmitBtn").textContent  = "Autor speichern";
+  document.getElementById("authorCancelBtn").hidden       = true;
+  document.getElementById("authorFormMsg").textContent    = "";
+}
+
+/**
+ * Löscht einen Autor nach Bestätigung.
+ * @param {string} authorId
+ */
+async function deleteAuthor(authorId) {
+  if (!confirm("Autor wirklich löschen?")) return;
+
+  try {
+    await apiFetch(`/api/authors/${authorId}`, { method: "DELETE" });
+    showToast("Autor gelöscht.", "success");
+    loadAdminAuthorList();
+    loadAuthorsDropdown();
+  } catch (e) {
+    showToast("Löschen fehlgeschlagen.", "error");
+  }
+}
+
+/**
+ * Lädt die Autorenliste für den Admin-Tab und rendert eine Tabelle
+ * mit Bearbeiten- und Löschen-Buttons.
+ */
+async function loadAdminAuthorList() {
+  const content = document.getElementById("adminAuthorListContent");
+  content.textContent = "Wird geladen…";
+
+  try {
+    const authors = await apiFetch("/api/authors");
+
+    if (!authors.length) {
+      content.textContent = "Noch keine Autoren vorhanden.";
+      return;
+    }
+
+    window._adminAuthors = {};
+    for (let a of authors) window._adminAuthors[a.authorID || a.authorId] = a;
+
+    let html = "<table><thead><tr><th>Vorname</th><th>Nachname</th><th>Aktionen</th></tr></thead><tbody>";
+
+    for (let a of authors) {
+      const id = a.authorID || a.authorId;
+      html += `
+        <tr>
+          <td>${escHtml(a.firstname || "–")}</td>
+          <td>${escHtml(a.name || "")}</td>
+          <td>
+            <button onclick="editAuthor(window._adminAuthors['${id}'])">Bearbeiten</button>
+            <button onclick="deleteAuthor('${id}')">Löschen</button>
+          </td>
+        </tr>`;
+    }
+
+    html += "</tbody></table>";
+    content.innerHTML = html;
+
+  } catch (e) {
+    content.textContent = "Autoren konnten nicht geladen werden.";
+  }
+}
+
+document.getElementById("authorCancelBtn").addEventListener("click", resetAuthorForm);
+
+document.getElementById("authorForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const authorId = document.getElementById("editAuthorId").value;
+  const payload  = {
+    firstname: document.getElementById("authorFirstname").value.trim(),
+    name:      document.getElementById("authorName").value.trim(),
+  };
+
+  try {
+    if (authorId) {
+      await apiFetch(`/api/authors/${authorId}`, { method: "PUT", body: JSON.stringify(payload) });
+      showFormMsg("authorFormMsg", "Autor erfolgreich aktualisiert.", "success");
+    } else {
+      await apiFetch("/api/authors", { method: "POST", body: JSON.stringify(payload) });
+      showFormMsg("authorFormMsg", "Autor erfolgreich angelegt.", "success");
+    }
+    resetAuthorForm();
+    loadAdminAuthorList();
+    loadAuthorsDropdown();
+  } catch (e) {
+    showFormMsg("authorFormMsg", "Fehler beim Speichern.", "error");
+  }
+});
+
+// ─── Admin: Kategorien ────────────────────────────────────────────────────────
+
+/**
+ * Füllt das Kategorien-Formular zum Bearbeiten einer vorhandenen Kategorie vor.
+ * @param {object} cat
+ */
+function editCategory(cat) {
+  document.getElementById("editCategoryId").value          = cat.categoryId;
+  document.getElementById("categoryName").value            = cat.name || "";
+  document.getElementById("categoryFormTitle").textContent = "Kategorie bearbeiten";
+  document.getElementById("categorySubmitBtn").textContent = "Änderungen speichern";
+  document.getElementById("categoryCancelBtn").hidden      = false;
+  activateAdminTab("adminCategories");
+  document.getElementById("categoryName").focus();
+}
+
+/** Setzt das Kategorien-Formular zurück. */
+function resetCategoryForm() {
+  document.getElementById("categoryForm").reset();
+  document.getElementById("editCategoryId").value           = "";
+  document.getElementById("categoryFormTitle").textContent  = "Neue Kategorie anlegen";
+  document.getElementById("categorySubmitBtn").textContent  = "Kategorie speichern";
+  document.getElementById("categoryCancelBtn").hidden       = true;
+  document.getElementById("categoryFormMsg").textContent    = "";
+}
+
+/**
+ * Löscht eine Kategorie nach Bestätigung.
+ * @param {string} categoryId
+ */
+async function deleteCategory(categoryId) {
+  if (!confirm("Kategorie wirklich löschen?")) return;
+
+  try {
+    await apiFetch(`/api/categories/${categoryId}`, { method: "DELETE" });
+    showToast("Kategorie gelöscht.", "success");
+    renderAdminCategories();
+    loadCategories();
+  } catch (e) {
+    showToast("Löschen fehlgeschlagen.", "error");
+  }
+}
+
+/**
+ * Lädt und rendert die Kategorieliste im Admin-Tab.
+ */
+async function renderAdminCategories() {
+  const content = document.getElementById("adminCategoryListContent");
+  content.textContent = "Wird geladen…";
+
+  try {
+    const categories = await apiFetch("/api/categories");
+
+    if (!categories.length) {
+      content.textContent = "Noch keine Kategorien vorhanden.";
+      return;
+    }
+
+    window._adminCategories = {};
+    for (let c of categories) window._adminCategories[c.categoryId] = c;
+
+    let html = "<table><thead><tr><th>Name</th><th>Aktionen</th></tr></thead><tbody>";
+
+    for (let c of categories) {
+      html += `
+        <tr>
+          <td>${escHtml(c.name || "")}</td>
+          <td>
+            <button onclick="editCategory(window._adminCategories['${c.categoryId}'])">Bearbeiten</button>
+            <button onclick="deleteCategory('${c.categoryId}')">Löschen</button>
+          </td>
+        </tr>`;
+    }
+
+    html += "</tbody></table>";
+    content.innerHTML = html;
+
+  } catch (e) {
+    content.textContent = "Kategorien konnten nicht geladen werden.";
+  }
+}
+
+document.getElementById("categoryCancelBtn").addEventListener("click", resetCategoryForm);
+
+document.getElementById("categoryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const categoryId = document.getElementById("editCategoryId").value;
+  const payload    = { name: document.getElementById("categoryName").value.trim() };
+
+  try {
+    if (categoryId) {
+      await apiFetch(`/api/categories/${categoryId}`, { method: "PUT", body: JSON.stringify(payload) });
+      showFormMsg("categoryFormMsg", "Kategorie erfolgreich aktualisiert.", "success");
+    } else {
+      await apiFetch("/api/categories", { method: "POST", body: JSON.stringify(payload) });
+      showFormMsg("categoryFormMsg", "Kategorie erfolgreich angelegt.", "success");
+    }
+    resetCategoryForm();
+    renderAdminCategories();
+    loadCategories();
+  } catch (e) {
+    showFormMsg("categoryFormMsg", "Fehler beim Speichern.", "error");
+  }
+});
+
 // ─── Suche ────────────────────────────────────────────────────────────────────
 
 searchBtn.onclick = loadBooks;
@@ -575,6 +810,8 @@ async function init() {
   loadBooks();
   loadAllLoans();
   loadAdminBookList();
+  loadAdminAuthorList();
+  renderAdminCategories();
 }
 
 init();
