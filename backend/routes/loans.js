@@ -109,66 +109,53 @@ router.post("/", async (req, res) => {
  *              Vierer-Kette: Loans → Books → BookAuthors → Authors
  */
 router.get("/", async (req, res) => {
-  const { author } = req.query;
-
   try {
-    const loans = await scanAll(loansTable);
-    const activeLoans = loans.filter((l) => !l.returnedAt);
+    const { authorfilter } = req.query;
 
-    // Autorenfilter: Vierer-Kette Loans → Books → BookAuthors → Authors
-    let filteredBookIds = null;
-    if (author) {
-      const q = author.toLowerCase();
-      const [allAuthors, allBookAuthors] = await Promise.all([
-        scanAll(authorsTable),
-        scanAll(bookAuthorsTable),
-      ]);
+    // 1. Aktive Ausleihen laden
+    let loans = (await scanAll(loansTable)).filter(l => !l.returnedAt);
 
-      // Schritt 1: passende Autoren-IDs finden
-      const matchingAuthorIds = new Set(
-        allAuthors
-          .filter((a) =>
-            (a.name      || "").toLowerCase().includes(q) ||
-            (a.firstname || "").toLowerCase().includes(q) ||
-            `${a.firstname || ""} ${a.name || ""}`.toLowerCase().includes(q),
-          )
-          .map((a) => a.authorID || a.authorId),
+    // 2. Optional nach Autor filtern
+    if (authorfilter) {
+      const q = authorfilter.toLowerCase();
+
+      //loans bereits am anfang geladen
+      const authors = await scanAll(authorsTable);
+      const bookAuthors = await scanAll(bookAuthorsTable);
+
+      //Set entfernt automatisch doppelte werte (fehlerhafte Daten)
+      const authorIds = new Set(
+        authors.filter(a =>`${a.firstname || ""} ${a.name || ""}`.toLowerCase().includes(q)).map(a => a.authorId ?? a.authorID)
+      ); //map macht aus objekten nur die Ids
+
+      const bookIds = new Set(
+        bookAuthors.filter(ba => authorIds.has(ba.authorId)).map(ba => ba.bookId)
       );
 
-      // Schritt 2: zugehörige Buch-IDs ermitteln
-      filteredBookIds = new Set(
-        allBookAuthors
-          .filter((ba) => matchingAuthorIds.has(ba.authorId))
-          .map((ba) => ba.bookId),
-      );
+      //alle loans wurden angezeigt und nun werden nur die gefilterten bookids geladen
+      loans = loans.filter(l => bookIds.has(l.bookId));
     }
 
-    const relevantLoans = filteredBookIds
-      ? activeLoans.filter((l) => filteredBookIds.has(l.bookId))
-      : activeLoans;
+    // 3. Buchdaten ergänzen
+    const result = [];
+    for (const loan of loans) {
+      const book = await docClient.send(
+        new GetCommand({TableName: booksTable,Key: { bookId: loan.bookId }})
+      );
+      result.push({ ...loan, book: book.Item });
+    }
 
-    // Buchtitel zu jeder Ausleihe laden
-    const enriched = await Promise.all(
-      relevantLoans.map(async (loan) => {
-        const bookResult = await docClient.send(
-          new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } }),
-        );
-        return {
-          ...loan,
-          book: bookResult.Item
-            ? { bookId: bookResult.Item.bookId, title: bookResult.Item.title }
-            : { bookId: loan.bookId, title: "Unbekanntes Buch" },
-        };
-      }),
-    );
 
-    enriched.sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
-    return res.json(enriched);
-  } catch (error) {
-    console.error("Fehler beim Laden der Ausleihen:", error);
-    return res.status(500).json({ message: "Ausleihen konnten nicht geladen werden." });
+    // 4. Sortieren
+    result.sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+
+    res.json(result);
+  } catch (err) {
+    console.error("Fehler:", err);
+    res.status(500).json({ message: "Ausleihen konnten nicht geladen werden." });
   }
 });
+
 
 // ─── Buch zurückgeben ──────────────────────────────────────────────────────
 
