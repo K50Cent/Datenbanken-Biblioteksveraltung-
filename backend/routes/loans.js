@@ -110,14 +110,17 @@ router.post("/", async (req, res) => {
  */
 router.get("/", async (req, res) => {
   try {
-    const { authorfilter } = req.query;
+    const { author, userId } = req.query;
 
-    // 1. Aktive Ausleihen laden
+    // 1. Aktive Ausleihen laden (optional nach userId filtern)
     let loans = (await scanAll(loansTable)).filter(l => !l.returnedAt);
+    if (userId) {
+      loans = loans.filter(l => l.userId === userId);
+    }
 
     // 2. Optional nach Autor filtern
-    if (authorfilter) {
-      const q = authorfilter.toLowerCase();
+    if (author) {
+      const q = author.toLowerCase();
 
       //loans bereits am anfang geladen
       const authors = await scanAll(authorsTable);

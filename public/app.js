@@ -321,7 +321,10 @@ async function loadAuthorsDropdown() {
 async function loadAllLoans() {
   const content = document.getElementById("loansContent");
   const authorQuery = document.getElementById("loansAuthorSearch")?.value.trim() || "";
-  const url = authorQuery ? `/api/loans?author=${encodeURIComponent(authorQuery)}` : "/api/loans";
+  const params = new URLSearchParams();
+  if (CURRENT_USER_ID) params.set("userId", CURRENT_USER_ID);
+  if (authorQuery) params.set("author", authorQuery);
+  const url = `/api/loans?${params.toString()}`;
 
   try {
     const loans = await apiFetch(url);
