@@ -26,6 +26,7 @@ const router = express.Router();
 // WICHTIG: Vor GET /:id registriert, sonst matched Express "recommendations" als :id
 
 /**
+ * Autor: Ramona
  * GET /api/books/recommendations
  * Gibt die Top-5-Bücher der meistausgeliehenen Kategorie zurück.
  * Algorithmus:
@@ -87,6 +88,7 @@ router.get("/recommendations/:userId", async (req, res) => {
 // ─── Bücher auflisten ──────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * GET /api/books
  * Gibt alle Bücher zurück, angereichert mit Autoren und Verfügbarkeit.
  * Optionale Filterparameter:
@@ -137,6 +139,7 @@ router.get("/", async (req, res) => {
 // ─── Buch anlegen ──────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * POST /api/books  [Admin-Bereich]
  * Legt ein neues Buch an und verknüpft es mit den angegebenen Autoren
  * über die BookAuthors-Tabelle.
@@ -181,6 +184,7 @@ router.post("/", async (req, res) => {
 // ─── Buch bearbeiten ───────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * PUT /api/books/:id  [Admin-Bereich]
  * Aktualisiert Buchdaten und ersetzt die Autoren-Verknüpfungen komplett.
  * Alte BookAuthors-Einträge werden gelöscht, neue werden angelegt.
@@ -239,6 +243,7 @@ router.put("/:id", async (req, res) => {
 // ─── Buch löschen ──────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * DELETE /api/books/:id  [Admin-Bereich]
  * Löscht ein Buch und alle zugehörigen BookAuthors-Einträge.
  */

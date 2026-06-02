@@ -15,6 +15,7 @@ const router = express.Router();
 // ─── Autoren auflisten ────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * GET /api/authors
  * Gibt alle Autoren zurück (für Dropdowns und Filterauswahl).
  */
@@ -31,6 +32,7 @@ router.get("/", async (_req, res) => {
 // ─── Autor anlegen ────────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * POST /api/authors  [Admin-Bereich]
  * Legt einen neuen Autor an.
  * Pflichtfeld: name (Nachname)
@@ -63,6 +65,7 @@ router.post("/", async (req, res) => {
 // ─── Autor aktualisieren ──────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * PUT /api/authors/:id  [Admin-Bereich]
  * Aktualisiert Vor- und Nachname eines Autors.
  * @param {string} req.params.id - Die authorID des zu ändernden Autors
@@ -104,6 +107,7 @@ router.put("/:id", async (req, res) => {
 // ─── Autor löschen ────────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * DELETE /api/authors/:id  [Admin-Bereich]
  * Löscht einen Autor anhand seiner ID.
  * @param {string} req.params.id - Die authorID des zu löschenden Autors

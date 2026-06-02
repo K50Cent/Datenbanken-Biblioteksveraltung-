@@ -16,6 +16,7 @@ const router = express.Router();
 // ─── Kategorien auflisten ──────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * GET /api/categories
  * Gibt alle Kategorien zurück.
  * Wird im Bücher-Filter und im Admin-Bereich genutzt.
@@ -33,6 +34,7 @@ router.get("/", async (_req, res) => {
 // ─── Kategorie anlegen ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * POST /api/categories  [Admin-Bereich]
  * Legt eine neue Kategorie mit einem automatisch generierten categoryId an.
  */
@@ -60,6 +62,7 @@ router.post("/", async (req, res) => {
 // ─── Kategorie aktualisieren ──────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * PUT /api/categories/:id  [Admin-Bereich]
  * Aktualisiert den Namen einer bestehenden Kategorie.
  * @param {string} req.params.id - Die categoryId der zu ändernden Kategorie
@@ -98,6 +101,7 @@ router.put("/:id", async (req, res) => {
 // ─── Kategorie löschen ────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * DELETE /api/categories/:id  [Admin-Bereich]
  * Löscht eine Kategorie anhand ihrer ID.
  * @param {string} req.params.id - Die categoryId der zu löschenden Kategorie

@@ -17,6 +17,7 @@ import { docClient } from "./dynamodb.js";
 // ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Prüft ob eine Tabelle bereits existiert.
  * @param {string} tableName
  * @returns {Promise<boolean>}
@@ -32,6 +33,7 @@ async function tableExists(tableName) {
 }
 
 /**
+ * Autor: Kjell
  * Wartet bis eine Tabelle den Status ACTIVE hat (max. 10 Sekunden).
  * @param {string} tableName
  */
@@ -45,6 +47,7 @@ async function waitForTable(tableName) {
 }
 
 /**
+ * Autor: Kjell
  * Erstellt eine Tabelle und wartet bis sie ACTIVE ist.
  * Überspringt die Erstellung wenn die Tabelle bereits existiert.
  * @param {string} tableName
@@ -64,6 +67,7 @@ async function createTable(tableName, tableConfig) {
 // ─── Tabellen-Definitionen ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Books-Tabelle
  * PK: bookId (String)
  * GSI: categoryId-index → für Abfragen nach Kategorie
@@ -89,6 +93,7 @@ async function createBooksTable() {
 }
 
 /**
+ * Autor: Kjell
  * Authors-Tabelle
  * PK: authorID (String) – Großbuchstabe D, bestehendes Schema beibehalten
  */
@@ -105,6 +110,7 @@ async function createAuthorsTable() {
 }
 
 /**
+ * Autor: Kjell
  * BookAuthors-Tabelle (Junction-Tabelle Buch ↔ Autor)
  * PK: bookId (String), SK: authorId (String)
  * GSI: bookId-index → für queryAll nach bookId
@@ -131,6 +137,7 @@ async function createBookAuthorsTable() {
 }
 
 /**
+ * Autor: Kjell
  * Categories-Tabelle
  * PK: categoryId (String)
  */
@@ -147,6 +154,7 @@ async function createCategoriesTable() {
 }
 
 /**
+ * Autor: Kjell
  * Loans-Tabelle
  * PK: loanId (String)
  * GSI: bookId-index → für Empfehlungsalgorithmus (Ausleihfrequenz pro Buch)
@@ -172,6 +180,7 @@ async function createLoansTable() {
 }
 
 /**
+ * Autor: Kjell
  * Users-Tabelle
  */
 async function createUsersTable() {
@@ -187,6 +196,7 @@ async function createUsersTable() {
 }
 
 /**
+ * Autor: Kjell
  * Legt einen Demo-Benutzer in der Users-Tabelle an.
  * Wird einmalig beim Setup ausgeführt, damit das Frontend sofort einen Benutzer hat.
  */
@@ -211,6 +221,7 @@ async function createDefaultUser() {
 // ─── Hauptfunktion ─────────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Erstellt alle DynamoDB-Tabellen und legt den Demo-Benutzer an.
  * Bereits existierende Tabellen werden übersprungen.
  */

@@ -22,6 +22,7 @@ let allAuthors = [];
 // ─── API-Hilfsfunktion ──────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Führt einen API-Request aus und gibt die JSON-Antwort zurück.
  * Wirft einen Fehler mit dem Server-Fehlermeldungstext bei HTTP-Fehlern.
  * @param {string} url
@@ -41,6 +42,7 @@ async function apiFetch(url, options = {}) {
 // ─── Toast-Benachrichtigungen ────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Zeigt eine kurze Toast-Benachrichtigung am unteren Bildschirmrand.
  * @param {string} msg  - Nachrichtentext
  * @param {"success"|"error"|"info"} [type="info"]
@@ -56,6 +58,7 @@ function showToast(msg, type = "info") {
 }
 
 /**
+ * Autor: Ramona
  * Zeigt eine Inline-Nachricht in einem Formular-Feedback-Element.
  * @param {string} elId - Element-ID
  * @param {string} msg
@@ -71,6 +74,7 @@ function showFormMsg(elId, msg, type) {
 // ─── Datum-Formatierung ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Formatiert ein ISO-Datum als deutsches Datum (DD.MM.YYYY).
  * @param {string} iso
  * @returns {string}
@@ -83,6 +87,7 @@ function formatDate(iso) {
 // ─── Buchkarte ──────────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Erstellt das HTML für eine Buchkarte.
  * Zeigt Titel, Autoren, Kategorie, ISBN, Jahr, Verfügbarkeit und Ausleihen-Button.
  * @param {object} book
@@ -152,6 +157,7 @@ function bookCardHTML(book, showLoanCount = false) {
 }
 
 /**
+ * Autor: Kjell
  * Escaped HTML-Sonderzeichen zur XSS-Prävention.
  * @param {string} str
  * @returns {string}
@@ -167,6 +173,7 @@ function escHtml(str) {
 // ─── Empfehlungen ────────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Lädt die Empfehlungen (Top-5-Bücher der meistausgeliehenen Kategorie)
  * und zeigt sie in der Empfehlungs-Sektion an.
  */
@@ -199,6 +206,7 @@ async function loadRecommendations() {
 // ─── Bücher browsen ──────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Lädt Bücher gefiltert nach Suchtext und Kategorie
  * und zeigt sie im Bücher-Raster an.
  */
@@ -236,6 +244,7 @@ async function loadBooks() {
 // ─── Kategorien-Dropdown befüllen ─────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Lädt alle Kategorien und füllt alle Kategorie-Dropdowns auf der Seite.
  */
 async function loadCategories() {
@@ -262,6 +271,7 @@ async function loadCategories() {
 
 
 /**
+ * Autor: Kjell
  * Gibt den Kategorienamen zur übergebenen ID zurück.
  * @param {string} categoryId
  * @returns {string}
@@ -278,6 +288,7 @@ function getCategoryName(categoryId) {
 // ─── Autoren-Dropdown befüllen ────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Lädt alle Autoren und füllt das Autoren-Mehrfachauswahl-Dropdown im Admin-Bereich.
  */
 async function loadAuthorsDropdown() {
@@ -303,6 +314,7 @@ async function loadAuthorsDropdown() {
 // ─── Aktive Ausleihen ─────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Lädt aktive Ausleihen, optional gefiltert nach Autorname.
  * Nutzt die Vierer-Kette: Loans → Books → BookAuthors → Authors.
  */
@@ -354,6 +366,7 @@ async function loadAllLoans() {
   }
 }
 /**
+ * Autor: Ramona
  * Leiht ein Buch aus und aktualisiert die Ansicht.
  * @param {string} bookId
  */
@@ -377,6 +390,7 @@ async function borrowBook(bookId) {
 // ─── Buch zurückgeben ─────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Gibt ein ausgeliehenes Buch zurück und aktualisiert die Ansicht.
  * @param {string} loanId
  */
@@ -401,6 +415,7 @@ async function returnBook(loanId) {
 // ─── Admin: Tab-Navigation ────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Wechselt den aktiven Tab im Admin-Bereich.
  * @param {"adminBooks"|"adminAuthors"|"adminCategories"} tabId
  */
@@ -419,6 +434,7 @@ function activateAdminTab(tabId) {
 // ─── Admin: Buch-Formular ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Füllt das Buch-Formular zum Bearbeiten eines vorhandenen Buches vor.
  * @param {object} book
  */
@@ -448,7 +464,10 @@ function editBook(book) {
 }
 
 
-/** Setzt das Buch-Formular zurück. */
+/**
+ * Autor: Kjell
+ * Setzt das Buch-Formular zurück.
+ */
 function resetBookForm() {
   document.getElementById("bookForm").reset();
   document.getElementById("editBookId").value = "";
@@ -458,8 +477,10 @@ function resetBookForm() {
   document.getElementById("bookFormMsg").textContent = "";
 }
 
+// Autor: Kjell
 document.getElementById("bookCancelBtn").addEventListener("click", resetBookForm);
 
+// Autor: Kjell
 document.getElementById("bookForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const bookId = document.getElementById("editBookId").value;
@@ -500,6 +521,7 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
 // ─── Admin: Bücher-Liste ──────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Lädt die Bücherliste für den Admin-Tab und rendert eine Tabelle
  * mit Bearbeiten- und Löschen-Buttons.
  */
@@ -550,6 +572,7 @@ async function loadAdminBookList() {
 }
 
 /**
+ * Autor: Kjell
  * Löscht ein Buch nach Bestätigung durch den Benutzer.
  * @param {string} bookId
  */
@@ -569,6 +592,7 @@ async function deleteBook(bookId) {
 // ─── Admin: Autoren ───────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Füllt das Autoren-Formular zum Bearbeiten eines vorhandenen Autors vor.
  * @param {object} author
  */
@@ -583,7 +607,10 @@ function editAuthor(author) {
   document.getElementById("authorName").focus();
 }
 
-/** Setzt das Autoren-Formular zurück. */
+/**
+ * Autor: Ramona
+ * Setzt das Autoren-Formular zurück.
+ */
 function resetAuthorForm() {
   document.getElementById("authorForm").reset();
   document.getElementById("editAuthorId").value           = "";
@@ -594,6 +621,7 @@ function resetAuthorForm() {
 }
 
 /**
+ * Autor: Ramona
  * Löscht einen Autor nach Bestätigung.
  * @param {string} authorId
  */
@@ -611,6 +639,7 @@ async function deleteAuthor(authorId) {
 }
 
 /**
+ * Autor: Ramona
  * Lädt die Autorenliste für den Admin-Tab und rendert eine Tabelle
  * mit Bearbeiten- und Löschen-Buttons.
  */
@@ -652,8 +681,10 @@ async function loadAdminAuthorList() {
   }
 }
 
+// Autor: Ramona
 document.getElementById("authorCancelBtn").addEventListener("click", resetAuthorForm);
 
+// Autor: Ramona
 document.getElementById("authorForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const authorId = document.getElementById("editAuthorId").value;
@@ -681,6 +712,7 @@ document.getElementById("authorForm").addEventListener("submit", async (e) => {
 // ─── Admin: Kategorien ────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * Füllt das Kategorien-Formular zum Bearbeiten einer vorhandenen Kategorie vor.
  * @param {object} cat
  */
@@ -694,7 +726,10 @@ function editCategory(cat) {
   document.getElementById("categoryName").focus();
 }
 
-/** Setzt das Kategorien-Formular zurück. */
+/**
+ * Autor: Ramona
+ * Setzt das Kategorien-Formular zurück.
+ */
 function resetCategoryForm() {
   document.getElementById("categoryForm").reset();
   document.getElementById("editCategoryId").value           = "";
@@ -705,6 +740,7 @@ function resetCategoryForm() {
 }
 
 /**
+ * Autor: Ramona
  * Löscht eine Kategorie nach Bestätigung.
  * @param {string} categoryId
  */
@@ -722,6 +758,7 @@ async function deleteCategory(categoryId) {
 }
 
 /**
+ * Autor: Ramona
  * Lädt und rendert die Kategorieliste im Admin-Tab.
  */
 async function renderAdminCategories() {
@@ -760,8 +797,10 @@ async function renderAdminCategories() {
   }
 }
 
+// Autor: Ramona
 document.getElementById("categoryCancelBtn").addEventListener("click", resetCategoryForm);
 
+// Autor: Ramona
 document.getElementById("categoryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const categoryId = document.getElementById("editCategoryId").value;
@@ -785,20 +824,25 @@ document.getElementById("categoryForm").addEventListener("submit", async (e) => 
 
 // ─── Suche ────────────────────────────────────────────────────────────────────
 
+// Autor: Kjell
 searchBtn.onclick = loadBooks;
 
+// Autor: Kjell
 searchInput.onkeydown = (e) => {
   if (e.key === "Enter") loadBooks();
 };
 
+// Autor: Ramona
 document.getElementById("loansSearchBtn").onclick = loadAllLoans;
 
+// Autor: Ramona
 document.getElementById("loansAuthorSearch").onkeydown = (e) => {
   if (e.key === "Enter") loadAllLoans();
 };
 // ─── Initialisierung ──────────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell und Ramona
  * Lädt alle Daten beim Start der Seite.
  */
 async function init() {

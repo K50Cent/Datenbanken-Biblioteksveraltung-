@@ -10,6 +10,7 @@ import { scanAll } from "../helpers.js";
 const router = express.Router();
 
 /**
+ * Autor: Ramona
  * GET /api/users/default
  * Gibt den ersten (Demo-)Benutzer zurück.
  * Normalisiert usernameKey → userId für Frontend-Kompatibilität.

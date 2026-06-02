@@ -19,6 +19,7 @@ export const loansTable      = process.env.LOANS_TABLE       || "Loans";
 // ─── Text-Hilfsfunktionen ──────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Entfernt führende und nachfolgende Leerzeichen aus einem String.
  * Gibt leeren String zurück, wenn kein String übergeben wurde.
  * @param {*} value
@@ -31,6 +32,7 @@ export function trimValue(value) {
 // ─── DynamoDB-Abfragen ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Liest alle Einträge aus einer DynamoDB-Tabelle (paginiert mit LastEvaluatedKey).
  * Optionaler Filter über FilterExpression.
  * @param {string} tableName
@@ -55,6 +57,7 @@ export async function scanAll(tableName, filterExpression, expressionValues, exp
 }
 
 /**
+ * Autor: Kjell
  * Führt eine paginierte Query auf einer DynamoDB-Tabelle oder einem Index durch.
  * @param {string} tableName
  * @param {string|null} indexName - GSI-Name oder null für Primärschlüssel
@@ -85,6 +88,7 @@ export async function queryAll(tableName, indexName, keyCondition, expressionVal
 // ─── Buch-Aufbereitung ─────────────────────────────────────────────────────
 
 /**
+ * Autor: Kjell
  * Reichert eine Liste von Büchern mit Autoreninformationen und Verfügbarkeit an.
  * Lädt BookAuthors, Authors und aktive Ausleihen parallel und verknüpft sie im Speicher.
  * Fügt außerdem das Feld `nextAvailable` hinzu (frühestes Rückgabedatum bei ausgeliehenen Büchern).

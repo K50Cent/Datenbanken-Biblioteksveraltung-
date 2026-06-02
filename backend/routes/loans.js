@@ -22,6 +22,7 @@ const router = express.Router();
 // ─── Buch ausleihen ────────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * POST /api/loans
  * Leiht ein Buch aus. Laufzeit: 14 Tage ab heute (dueDate).
  * Pflichtfeld: bookId
@@ -97,6 +98,7 @@ router.post("/", async (req, res) => {
 // ─── Alle aktiven Ausleihen anzeigen ──────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * GET /api/loans
  * Gibt alle aktiven (nicht zurückgegebenen) Ausleihen zurück.
  * Jede Ausleihe wird mit dem Buchtitel angereichert.
@@ -171,6 +173,7 @@ router.get("/", async (req, res) => {
 // ─── Buch zurückgeben ──────────────────────────────────────────────────────
 
 /**
+ * Autor: Ramona
  * POST /api/loans/:id/return
  * Markiert eine Ausleihe als zurückgegeben (returnedAt) und
  * erhöht die verfügbaren Exemplare des Buches wieder.

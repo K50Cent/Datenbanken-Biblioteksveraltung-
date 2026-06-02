@@ -42,11 +42,15 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/loans",      loanRoutes);
 app.use("/api/users",      userRoutes);
 
-/** GET /api/health – Einfacher Statuscheck für den Server */
+/**
+ * Autor: Kjell
+ * GET /api/health – Einfacher Statuscheck für den Server.
+ */
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // ─── Server starten ────────────────────────────────────────────────────────
 
+// Autor: Kjell
 app.listen(port, () => {
   console.log(`Bibliotheksverwaltung läuft unter http://localhost:${port}`);
 });
