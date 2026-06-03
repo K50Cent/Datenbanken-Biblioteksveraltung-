@@ -1,34 +1,9 @@
-/**
- * app.js
- * Frontend-Logik für die Bibliotheksverwaltung (Single-Page, kein Login).
- * Kommuniziert mit der Backend-API über fetch().
- *
- * Sektionen:
- *   - Empfehlungen     → GET /api/books/recommendations
- *   - Bücher browsen   → GET /api/books
- *   - Aktive Ausleihen → GET /api/loans
- *   - Admin-Bereich    → CRUD Bücher, Autoren, Kategorien
- */
-
 "use strict";
-
 let CURRENT_USER_ID = null;
-
-
-
 let allCategories = [];
 let allAuthors = [];
 
-// ─── API-Hilfsfunktion ──────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Führt einen API-Request aus und gibt die JSON-Antwort zurück.
- * Wirft einen Fehler mit dem Server-Fehlermeldungstext bei HTTP-Fehlern.
- * @param {string} url
- * @param {RequestInit} [options]
- * @returns {Promise<any>}
- */
+//Autor: Kjell
 async function apiFetch(url, options = {}) {
   const defaults = {
     headers: { "Content-Type": "application/json" },
@@ -39,14 +14,7 @@ async function apiFetch(url, options = {}) {
   return data;
 }
 
-// ─── Toast-Benachrichtigungen ────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Zeigt eine kurze Toast-Benachrichtigung am unteren Bildschirmrand.
- * @param {string} msg  - Nachrichtentext
- * @param {"success"|"error"|"info"} [type="info"]
- */
+//Autor: Ramona
 function showToast(msg, type = "info") {
   const container = document.getElementById("toastContainer");
   const toast = document.createElement("div");
@@ -57,43 +25,13 @@ function showToast(msg, type = "info") {
   setTimeout(() => toast.remove(), 4000);
 }
 
-/**
- * Autor: Ramona
- * Zeigt eine Inline-Nachricht in einem Formular-Feedback-Element.
- * @param {string} elId - Element-ID
- * @param {string} msg
- * @param {"success"|"error"} type
- */
-function showFormMsg(elId, msg, type) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  el.className = `message message-${type}`;
-  el.textContent = msg;
-}
-
-// ─── Datum-Formatierung ─────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Formatiert ein ISO-Datum als deutsches Datum (DD.MM.YYYY).
- * @param {string} iso
- * @returns {string}
- */
+//Autor: Ramona
 function formatDate(iso) {
   if (!iso) return "–";
   return new Date(iso).toLocaleDateString("de-DE");
 }
 
-// ─── Buchkarte ──────────────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Erstellt das HTML für eine Buchkarte.
- * Zeigt Titel, Autoren, Kategorie, ISBN, Jahr, Verfügbarkeit und Ausleihen-Button.
- * @param {object} book
- * @param {boolean} [showLoanCount=false] - Zeigt die Ausleih-Häufigkeit an (Empfehlungen)
- * @returns {string} HTML-String
- */
+//Autor: Kjell
 function bookCardHTML(book, showLoanCount = false) {
   // Autoren: alle aus book.authors[], Fallback auf book.author
   let authorText = " ";
@@ -104,9 +42,6 @@ function bookCardHTML(book, showLoanCount = false) {
   } else if (book.author) {
     authorText = book.author;
   }
-
-  // Verfügbarkeits-Badge
-  // Verfügbarkeit bestimmen
   let isAvailable;
 
   if (book.availableCopies != null) {
@@ -115,22 +50,14 @@ function bookCardHTML(book, showLoanCount = false) {
     isAvailable = book.available !== false;
   }
 
-  // Badge erzeugen
   let availBadge;
-
-  if (book.availableCopies == null) {
-    // Altes Modell ohne Kopienzahl
-    availBadge = `<span>${isAvailable ? "Verfügbar" : "Ausgeliehen"}</span>`;
+  if (isAvailable) {
+    availBadge = `<span>Verfügbar ${book.availableCopies}/${book.totalCopies ?? book.availableCopies}</span>`;
   } else {
-    // Neues Modell mit Kopienzahl
-    if (isAvailable) {
-      availBadge = `<span>Verfügbar ${book.availableCopies}/${book.totalCopies ?? book.availableCopies}</span>`;
-    } else {
-      const freeDate = book.nextAvailable
-      ? ` – frei ab ${formatDate(book.nextAvailable)}`
-      : "";
-      availBadge = `<span>Ausgeliehen${freeDate}</span>`;
-    }
+    const freeDate = book.nextAvailable
+    ? ` – frei ab ${formatDate(book.nextAvailable)}`
+    : "";
+    availBadge = `<span>Ausgeliehen${freeDate}</span>`;
   }
 
   let loanCountBadge = "";
@@ -156,12 +83,7 @@ function bookCardHTML(book, showLoanCount = false) {
     </div>`;
 }
 
-/**
- * Autor: Kjell
- * Escaped HTML-Sonderzeichen zur XSS-Prävention.
- * @param {string} str
- * @returns {string}
- */
+//Autor: Kjell
 function escHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -177,16 +99,13 @@ async function loadRecommendations() {
 
   recBooks.innerHTML = "";
   recName.textContent = "";
-  
-  try {
-    // personalisierte Empfehlung laden
-    const data = await apiFetch(`/api/books/recommendations/${CURRENT_USER_ID}`);
 
+  try {
+    const data = await apiFetch(`/api/books/recommendations/${CURRENT_USER_ID}`);
     if (!data.books || data.books.length === 0) {
       recBooks.innerHTML = "<p>Noch keine Empfehlungen vorhanden.</p>";
       return;
     }
-
     recBooks.innerHTML = data.books
       .map(b => bookCardHTML(b, true))
       .join("");
@@ -197,14 +116,7 @@ async function loadRecommendations() {
   }
 }
 
-
-// ─── Bücher browsen ──────────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Lädt Bücher gefiltert nach Suchtext und Kategorie
- * und zeigt sie im Bücher-Raster an.
- */
+//Autor: Kjell
 async function loadBooks() {
   const search = document.getElementById("searchInput").value.trim();
   const category = document.getElementById("categoryFilter").value;
@@ -236,28 +148,20 @@ async function loadBooks() {
 }
 
 
-// ─── Kategorien-Dropdown befüllen ─────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Lädt alle Kategorien und füllt alle Kategorie-Dropdowns auf der Seite.
- */
+//Autor: Ramona
 async function loadCategories() {
   try {
     const cats = await apiFetch("/api/categories");
-    allCategories = cats;
+    allCategories = cats.sort((a, b) => a.name.localeCompare(b.name));
 
     const filterSel = document.getElementById("categoryFilter");
     const bookCatSel = document.getElementById("bookCategory");
 
-    cats.sort((a, b) => a.name.localeCompare(b.name));
-
-    for (let c of cats) {
+    for (const c of allCategories) {
       const opt = new Option(c.name, c.categoryId);
-      filterSel.add(new Option(c.name, c.categoryId));
-      bookCatSel.add(new Option(c.name, c.categoryId));
+      filterSel.add(opt.cloneNode(true));
+      bookCatSel.add(opt);
     }
-
     renderAdminCategories();
   } catch (e) {
     console.error("Fehler beim Laden der Kategorien");
@@ -265,12 +169,8 @@ async function loadCategories() {
 }
 
 
-/**
- * Autor: Kjell
- * Gibt den Kategorienamen zur übergebenen ID zurück.
- * @param {string} categoryId
- * @returns {string}
- */
+
+//Autor: Kjell
 function getCategoryName(categoryId) {
   if (!categoryId) return "Unbekannte Kategorie";
 
@@ -280,25 +180,20 @@ function getCategoryName(categoryId) {
   return "Unbekannte Kategorie";
 }
 
-// ─── Autoren-Dropdown befüllen ────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Lädt alle Autoren und füllt das Autoren-Mehrfachauswahl-Dropdown im Admin-Bereich.
- */
+//Autor: Ramona
 async function loadAuthorsDropdown() {
   try {
     const authors = await apiFetch("/api/authors");
-    allAuthors = authors;
+    allAuthors = authors.sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "")
+    );
 
     const sel = document.getElementById("bookAuthors");
     sel.innerHTML = "";
 
-    authors.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-
-    for (let a of authors) {
-      const full = ((a.firstname || "") + " " + (a.name || ""));
-      sel.add(new Option(full, a.authorId || a.authorID));
+    for (const a of allAuthors) {
+      const full = `${a.firstname || ""} ${a.name || ""}`.trim();
+      sel.add(new Option(full, a.authorId ?? a.authorID));
     }
 
   } catch (e) {
@@ -306,13 +201,7 @@ async function loadAuthorsDropdown() {
   }
 }
 
-// ─── Aktive Ausleihen ─────────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Lädt aktive Ausleihen, optional gefiltert nach Autorname.
- * Nutzt die Vierer-Kette: Loans → Books → BookAuthors → Authors.
- */
+//Autor: Ramona
 async function loadAllLoans() {
   const content = document.getElementById("loansContent");
   const authorQuery = document.getElementById("loansAuthorSearch")?.value.trim() || "";
@@ -363,11 +252,7 @@ async function loadAllLoans() {
     console.error(e);
   }
 }
-/**
- * Autor: Ramona
- * Leiht ein Buch aus und aktualisiert die Ansicht.
- * @param {string} bookId
- */
+//Autor: Ramona
 async function borrowBook(bookId) {
   try {
     await apiFetch("/api/loans", {
@@ -384,14 +269,7 @@ async function borrowBook(bookId) {
   }
 }
 
-
-// ─── Buch zurückgeben ─────────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Gibt ein ausgeliehenes Buch zurück und aktualisiert die Ansicht.
- * @param {string} loanId
- */
+//Autor: Ramona
 async function returnBook(loanId) {
   try {
     await apiFetch(`/api/loans/${loanId}/return`, {
@@ -404,38 +282,12 @@ async function returnBook(loanId) {
     loadAllLoans();
     loadRecommendations();
 
-  } catch (e) {
+  } catch (error) {
     showToast("Rückgabe fehlgeschlagen.", "error");
   }
 }
 
-
-// ─── Admin: Tab-Navigation ────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Wechselt den aktiven Tab im Admin-Bereich.
- * @param {"adminBooks"|"adminAuthors"|"adminCategories"} tabId
- */
-function activateAdminTab(tabId) {
-  const tabs = ["adminBooks", "adminAuthors", "adminCategories"];
-  const btnIds = { adminBooks: "tabBtnBooks", adminAuthors: "tabBtnAuthors", adminCategories: "tabBtnCategories" };
-
-  for (const id of tabs) {
-    const panel = document.getElementById(id);
-    if (panel) panel.hidden = (id !== tabId);
-    const btn = document.getElementById(btnIds[id]);
-    if (btn) btn.classList.toggle("active", id === tabId);
-  }
-}
-
-// ─── Admin: Buch-Formular ─────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Füllt das Buch-Formular zum Bearbeiten eines vorhandenen Buches vor.
- * @param {object} book
- */
+//Autor: Kjell
 function editBook(book) {
   document.getElementById("editBookId").value = book.bookId;
   document.getElementById("bookTitle").value  = book.title || "";
@@ -462,10 +314,7 @@ function editBook(book) {
 }
 
 
-/**
- * Autor: Kjell
- * Setzt das Buch-Formular zurück.
- */
+//Autor: Kjell
 function resetBookForm() {
   document.getElementById("bookForm").reset();
   document.getElementById("editBookId").value = "";
@@ -516,13 +365,8 @@ document.getElementById("bookForm").addEventListener("submit", async (e) => {
     showFormMsg("bookFormMsg", "Fehler beim Speichern.", "error");
   }
 });
-// ─── Admin: Bücher-Liste ──────────────────────────────────────────────────────
 
-/**
- * Autor: Kjell
- * Lädt die Bücherliste für den Admin-Tab und rendert eine Tabelle
- * mit Bearbeiten- und Löschen-Buttons.
- */
+//Autor: Kjell
 async function loadAdminBookList() {
   const content = document.getElementById("adminBookListContent");
   content.textContent = "Wird geladen…";
@@ -569,11 +413,7 @@ async function loadAdminBookList() {
   }
 }
 
-/**
- * Autor: Kjell
- * Löscht ein Buch nach Bestätigung durch den Benutzer.
- * @param {string} bookId
- */
+//Autor: Kjell
 async function deleteBook(bookId) {
   if (!confirm("Buch wirklich löschen?")) return;
 
@@ -587,57 +427,6 @@ async function deleteBook(bookId) {
     showToast("Löschen fehlgeschlagen.", "error");
   }
 }
-// ─── Admin: Autoren ───────────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Füllt das Autoren-Formular zum Bearbeiten eines vorhandenen Autors vor.
- * @param {object} author
- */
-function editAuthor(author) {
-  document.getElementById("editAuthorId").value    = author.authorID || author.authorId;
-  document.getElementById("authorFirstname").value = author.firstname || "";
-  document.getElementById("authorName").value      = author.name || "";
-  document.getElementById("authorFormTitle").textContent = "Autor bearbeiten";
-  document.getElementById("authorSubmitBtn").textContent  = "Änderungen speichern";
-  document.getElementById("authorCancelBtn").hidden       = false;
-  activateAdminTab("adminAuthors");
-  document.getElementById("authorName").focus();
-}
-
-/**
- * Autor: Ramona
- * Setzt das Autoren-Formular zurück.
- */
-function resetAuthorForm() {
-  document.getElementById("authorForm").reset();
-  document.getElementById("editAuthorId").value           = "";
-  document.getElementById("authorFormTitle").textContent  = "Neuen Autor anlegen";
-  document.getElementById("authorSubmitBtn").textContent  = "Autor speichern";
-  document.getElementById("authorCancelBtn").hidden       = true;
-  document.getElementById("authorFormMsg").textContent    = "";
-}
-
-/**
- * Autor: Ramona
- * Löscht einen Autor nach Bestätigung.
- * @param {string} authorId
- */
-async function deleteAuthor(authorId) {
-  if (!confirm("Autor wirklich löschen?")) return;
-
-  try {
-    await apiFetch(`/api/authors/${authorId}`, { method: "DELETE" });
-    showToast("Autor gelöscht.", "success");
-    loadAdminAuthorList();
-    loadAuthorsDropdown();
-  } catch (e) {
-    showToast("Löschen fehlgeschlagen.", "error");
-  }
-}
-
-
-// ─── Suche ────────────────────────────────────────────────────────────────────
 
 // Autor: Kjell
 searchBtn.onclick = loadBooks;
@@ -654,12 +443,8 @@ document.getElementById("loansSearchBtn").onclick = loadAllLoans;
 document.getElementById("loansAuthorSearch").onkeydown = (e) => {
   if (e.key === "Enter") loadAllLoans();
 };
-// ─── Initialisierung ──────────────────────────────────────────────────────────
+//Autor: Kjell und Ramona
 
-/**
- * Autor: Kjell und Ramona
- * Lädt alle Daten beim Start der Seite.
- */
 async function init() {
   await loadCategories();
   await loadAuthorsDropdown();
@@ -675,7 +460,6 @@ async function init() {
 
 init();
 
-// Globale Funktionen für inline-onclick
 window.borrowBook  = borrowBook;
 window.returnBook  = returnBook;
 window.editBook    = editBook;

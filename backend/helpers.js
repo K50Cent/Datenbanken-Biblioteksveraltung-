@@ -1,14 +1,5 @@
-/**
- * helpers.js
- * Gemeinsame Hilfsfunktionen für alle Backend-Module.
- * Enthält: DynamoDB-Abfragen und Buchaufbereitung
- * (Autoren + Verfügbarkeit).
- */
-
 import { ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "./dynamodb.js";
-
-// ─── Tabellennamen (aus .env oder Standardwerte) ───────────────────────────
 
 export const booksTable      = process.env.BOOKS_TABLE       || "Books";
 export const authorsTable    = process.env.AUTHORS_TABLE     || "Authors";
@@ -16,31 +7,12 @@ export const bookAuthorsTable= process.env.BOOK_AUTHORS_TABLE|| "BookAuthors";
 export const categoriesTable = process.env.CATEGORIES_TABLE  || "Categories";
 export const loansTable      = process.env.LOANS_TABLE       || "Loans";
 
-// ─── Text-Hilfsfunktionen ──────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Entfernt führende und nachfolgende Leerzeichen aus einem String.
- * Gibt leeren String zurück, wenn kein String übergeben wurde.
- * @param {*} value
- * @returns {string}
- */
+//Autor: Kjell
 export function trimValue(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-// ─── DynamoDB-Abfragen ─────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Liest alle Einträge aus einer DynamoDB-Tabelle (paginiert mit LastEvaluatedKey).
- * Optionaler Filter über FilterExpression.
- * @param {string} tableName
- * @param {string} [filterExpression]
- * @param {object} [expressionValues]
- * @param {object} [expressionNames]
- * @returns {Promise<object[]>}
- */
+//Autor: Kjell
 export async function scanAll(tableName, filterExpression, expressionValues, expressionNames) {
   const items = [];
   let lastKey;
@@ -56,16 +28,7 @@ export async function scanAll(tableName, filterExpression, expressionValues, exp
   return items;
 }
 
-/**
- * Autor: Kjell
- * Führt eine paginierte Query auf einer DynamoDB-Tabelle oder einem Index durch.
- * @param {string} tableName
- * @param {string|null} indexName - GSI-Name oder null für Primärschlüssel
- * @param {string} keyCondition
- * @param {object} expressionValues
- * @param {object} [expressionNames]
- * @returns {Promise<object[]>}
- */
+//Autor: Kjell
 export async function queryAll(tableName, indexName, keyCondition, expressionValues, expressionNames) {
   const items = [];
   let lastKey;
@@ -85,16 +48,7 @@ export async function queryAll(tableName, indexName, keyCondition, expressionVal
   return items;
 }
 
-// ─── Buch-Aufbereitung ─────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * Reichert eine Liste von Büchern mit Autoreninformationen und Verfügbarkeit an.
- * Lädt BookAuthors, Authors und aktive Ausleihen parallel und verknüpft sie im Speicher.
- * Fügt außerdem das Feld `nextAvailable` hinzu (frühestes Rückgabedatum bei ausgeliehenen Büchern).
- * @param {object[]} books
- * @returns {Promise<object[]>} Bücher mit `authors`-Array und `nextAvailable`
- */
+//Autor: Kjell
 export async function enrichBooksWithAuthorsAndAvailability(books) {
   if (!books.length) return [];
 
