@@ -1,88 +1,45 @@
-/**
- * routes/books.js
- * Bücher-Routen: Auflisten, Empfehlungen, Anlegen, Bearbeiten, Löschen.
- * Alle Endpunkte unter /api/books/
- * Alle Routen sind ohne Login zugänglich (Kirchberg-Version ohne Auth).
- */
-
 import crypto from "node:crypto";
 import express from "express";
 import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient } from "../dynamodb.js";
-import {
-  booksTable,
-  bookAuthorsTable,
-  categoriesTable,
-  loansTable,
-  trimValue,
-  scanAll,
-  queryAll,
-  enrichBooksWithAuthorsAndAvailability,
-} from "../helpers.js";
+import {booksTable,bookAuthorsTable,categoriesTable,loansTable,trimValue,scanAll,queryAll,enrichBooksWithAuthorsAndAvailability,} from "../helpers.js";
 
 const router = express.Router();
 
-// ─── Empfehlungen ──────────────────────────────────────────────────────────
-// WICHTIG: Vor GET /:id registriert, sonst matched Express "recommendations" als :id
-
-/**
- * Autor: Ramona
- * GET /api/books/recommendations
- * Gibt die Top-5-Bücher der meistausgeliehenen Kategorie zurück.
- * Algorithmus:
- *   1. Alle Ausleihen zählen (aktiv + abgeschlossen) pro Buch
- *   2. Kategorie mit höchster Gesamt-Ausleihzahl ermitteln
- *   3. Top 5 Bücher dieser Kategorie nach Ausleihzahl zurückgeben
- * Fallback: 5 beliebige Bücher, wenn keine Ausleihen vorhanden.
- */
+//Autor: Ramona Buchbinder
 router.get("/recommendations/:userId", async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    // 1. Alle Ausleihen dieses Users laden
-    const myLoans = await scanAll(loansTable, "userId = :u", { ":u": userId });
+    const allLoans = await scanAll(loansTable);
+    const userLoans = allLoans.filter(l => l.userId === userId);
 
-    if (!myLoans.length) {
+    if (!userLoans.length) {
       return res.json({ categoryName: null, books: [] });
     }
 
-    // 2. Kategorien zählen
     const categoryCount = {};
 
-    for (const loan of myLoans) {
-      const book = await docClient.send(
-        new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } })
-      );
-
-      const cat = book.Item?.categoryId || "__none__";
-      categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+    for (const loan of userLoans) {
+      const bookObject = await docClient.send(new GetCommand({ TableName: booksTable, Key: { bookId: loan.bookId } }));
+      const categoryc = bookObject.Item?.categoryId || "__none__";
+      categoryCount[categoryc] = (categoryCount[categoryc] || 0) + 1;
     }
 
-    // 3. Lieblingskategorie bestimmen
-    const topCategory = Object.entries(categoryCount)
-      .sort((a, b) => b[1] - a[1])[0][0];
+    const topCategory = Object.keys(categoryCount)
+      .sort((a, b) => categoryCount[b] - categoryCount[a])[0];
 
-    // 4. Bücher aus dieser Kategorie laden
-    const books = await queryAll(
-      booksTable,
-      "categoryId-index",
-      "categoryId = :c",
-      { ":c": topCategory }
-    );
+    const books = await queryAll(booksTable,"categoryId-index","categoryId = :c",{ ":c": topCategory });
 
-    // 5. Bücher anreichern
     const enriched = await enrichBooksWithAuthorsAndAvailability(books);
 
-    return res.json({
-      categoryName: topCategory,
-      books: enriched.slice(0, 5),
-    });
+    res.json({books: enriched.slice(0, 5)});
 
   } catch (error) {
-    console.error("Fehler bei personalisierten Empfehlungen:", error);
-    return res.status(500).json({ message: "Empfehlungen konnten nicht geladen werden." });
+    res.status(500).json({ message: "Empfehlungen konnten nicht geladen werden." });
   }
 });
+
 
 
 // ─── Bücher auflisten ──────────────────────────────────────────────────────

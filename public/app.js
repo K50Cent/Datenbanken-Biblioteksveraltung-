@@ -170,22 +170,17 @@ function escHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-// ─── Empfehlungen ────────────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Lädt die Empfehlungen (Top-5-Bücher der meistausgeliehenen Kategorie)
- * und zeigt sie in der Empfehlungs-Sektion an.
- */
+//Autor: Ramona
 async function loadRecommendations() {
   const recBooks = document.getElementById("recBooks");
   const recName  = document.getElementById("recCategoryName");
 
+  recBooks.innerHTML = "";
+  recName.textContent = "";
+  
   try {
     // personalisierte Empfehlung laden
     const data = await apiFetch(`/api/books/recommendations/${CURRENT_USER_ID}`);
-
-    recName.textContent = data.categoryName || "Keine Kategorie";
 
     if (!data.books || data.books.length === 0) {
       recBooks.innerHTML = "<p>Noch keine Empfehlungen vorhanden.</p>";
@@ -641,189 +636,6 @@ async function deleteAuthor(authorId) {
   }
 }
 
-/**
- * Autor: Ramona
- * Lädt die Autorenliste für den Admin-Tab und rendert eine Tabelle
- * mit Bearbeiten- und Löschen-Buttons.
- */
-async function loadAdminAuthorList() {
-  const content = document.getElementById("adminAuthorListContent");
-  content.textContent = "Wird geladen…";
-
-  try {
-    const authors = await apiFetch("/api/authors");
-
-    if (!authors.length) {
-      content.textContent = "Noch keine Autoren vorhanden.";
-      return;
-    }
-
-    window._adminAuthors = {};
-    for (let a of authors) window._adminAuthors[a.authorID || a.authorId] = a;
-
-    let html = "<table><thead><tr><th>Vorname</th><th>Nachname</th><th>Aktionen</th></tr></thead><tbody>";
-
-    for (let a of authors) {
-      const id = a.authorID || a.authorId;
-      html += `
-        <tr>
-          <td>${escHtml(a.firstname || "–")}</td>
-          <td>${escHtml(a.name || "")}</td>
-          <td>
-            <button onclick="editAuthor(window._adminAuthors['${id}'])">Bearbeiten</button>
-            <button onclick="deleteAuthor('${id}')">Löschen</button>
-          </td>
-        </tr>`;
-    }
-
-    html += "</tbody></table>";
-    content.innerHTML = html;
-
-  } catch (e) {
-    content.textContent = "Autoren konnten nicht geladen werden.";
-  }
-}
-
-// Autor: Ramona
-document.getElementById("authorCancelBtn").addEventListener("click", resetAuthorForm);
-
-// Autor: Ramona
-document.getElementById("authorForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const authorId = document.getElementById("editAuthorId").value;
-  const payload  = {
-    firstname: document.getElementById("authorFirstname").value.trim(),
-    name:      document.getElementById("authorName").value.trim(),
-  };
-
-  try {
-    if (authorId) {
-      await apiFetch(`/api/authors/${authorId}`, { method: "PUT", body: JSON.stringify(payload) });
-      showFormMsg("authorFormMsg", "Autor erfolgreich aktualisiert.", "success");
-    } else {
-      await apiFetch("/api/authors", { method: "POST", body: JSON.stringify(payload) });
-      showFormMsg("authorFormMsg", "Autor erfolgreich angelegt.", "success");
-    }
-    resetAuthorForm();
-    loadAdminAuthorList();
-    loadAuthorsDropdown();
-  } catch (e) {
-    showFormMsg("authorFormMsg", "Fehler beim Speichern.", "error");
-  }
-});
-
-// ─── Admin: Kategorien ────────────────────────────────────────────────────────
-
-/**
- * Autor: Ramona
- * Füllt das Kategorien-Formular zum Bearbeiten einer vorhandenen Kategorie vor.
- * @param {object} cat
- */
-function editCategory(cat) {
-  document.getElementById("editCategoryId").value          = cat.categoryId;
-  document.getElementById("categoryName").value            = cat.name || "";
-  document.getElementById("categoryFormTitle").textContent = "Kategorie bearbeiten";
-  document.getElementById("categorySubmitBtn").textContent = "Änderungen speichern";
-  document.getElementById("categoryCancelBtn").hidden      = false;
-  activateAdminTab("adminCategories");
-  document.getElementById("categoryName").focus();
-}
-
-/**
- * Autor: Ramona
- * Setzt das Kategorien-Formular zurück.
- */
-function resetCategoryForm() {
-  document.getElementById("categoryForm").reset();
-  document.getElementById("editCategoryId").value           = "";
-  document.getElementById("categoryFormTitle").textContent  = "Neue Kategorie anlegen";
-  document.getElementById("categorySubmitBtn").textContent  = "Kategorie speichern";
-  document.getElementById("categoryCancelBtn").hidden       = true;
-  document.getElementById("categoryFormMsg").textContent    = "";
-}
-
-/**
- * Autor: Ramona
- * Löscht eine Kategorie nach Bestätigung.
- * @param {string} categoryId
- */
-async function deleteCategory(categoryId) {
-  if (!confirm("Kategorie wirklich löschen?")) return;
-
-  try {
-    await apiFetch(`/api/categories/${categoryId}`, { method: "DELETE" });
-    showToast("Kategorie gelöscht.", "success");
-    renderAdminCategories();
-    loadCategories();
-  } catch (e) {
-    showToast("Löschen fehlgeschlagen.", "error");
-  }
-}
-
-/**
- * Autor: Ramona
- * Lädt und rendert die Kategorieliste im Admin-Tab.
- */
-async function renderAdminCategories() {
-  const content = document.getElementById("adminCategoryListContent");
-  content.textContent = "Wird geladen…";
-
-  try {
-    const categories = await apiFetch("/api/categories");
-
-    if (!categories.length) {
-      content.textContent = "Noch keine Kategorien vorhanden.";
-      return;
-    }
-
-    window._adminCategories = {};
-    for (let c of categories) window._adminCategories[c.categoryId] = c;
-
-    let html = "<table><thead><tr><th>Name</th><th>Aktionen</th></tr></thead><tbody>";
-
-    for (let c of categories) {
-      html += `
-        <tr>
-          <td>${escHtml(c.name || "")}</td>
-          <td>
-            <button onclick="editCategory(window._adminCategories['${c.categoryId}'])">Bearbeiten</button>
-            <button onclick="deleteCategory('${c.categoryId}')">Löschen</button>
-          </td>
-        </tr>`;
-    }
-
-    html += "</tbody></table>";
-    content.innerHTML = html;
-
-  } catch (e) {
-    content.textContent = "Kategorien konnten nicht geladen werden.";
-  }
-}
-
-// Autor: Ramona
-document.getElementById("categoryCancelBtn").addEventListener("click", resetCategoryForm);
-
-// Autor: Ramona
-document.getElementById("categoryForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const categoryId = document.getElementById("editCategoryId").value;
-  const payload    = { name: document.getElementById("categoryName").value.trim() };
-
-  try {
-    if (categoryId) {
-      await apiFetch(`/api/categories/${categoryId}`, { method: "PUT", body: JSON.stringify(payload) });
-      showFormMsg("categoryFormMsg", "Kategorie erfolgreich aktualisiert.", "success");
-    } else {
-      await apiFetch("/api/categories", { method: "POST", body: JSON.stringify(payload) });
-      showFormMsg("categoryFormMsg", "Kategorie erfolgreich angelegt.", "success");
-    }
-    resetCategoryForm();
-    renderAdminCategories();
-    loadCategories();
-  } catch (e) {
-    showFormMsg("categoryFormMsg", "Fehler beim Speichern.", "error");
-  }
-});
 
 // ─── Suche ────────────────────────────────────────────────────────────────────
 
