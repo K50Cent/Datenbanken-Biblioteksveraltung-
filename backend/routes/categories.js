@@ -6,7 +6,7 @@ import { categoriesTable, trimValue, scanAll } from "../helpers.js";
 
 const router = express.Router();
 
-//Autor: Ramona Buchbinder
+//Autor: Ramona
 router.get("/", async (_req, res) => {
   try {
     const categories = await scanAll(categoriesTable);

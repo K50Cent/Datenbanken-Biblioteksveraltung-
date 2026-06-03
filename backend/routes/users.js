@@ -3,8 +3,9 @@ import { scanAll } from "../helpers.js";
 
 const router = express.Router();
 
-// Autor: Ramona Buchbinder
+// Autor: Ramona
 // Da kein Login erfolgt wird hier der fünfte User aus der User Tabelle geladen und für die weiteren Operationen benutzt
+// der fünfte user wurde hierbei zufällig ausgewählt
 router.get("/default", async (_req, res) => {
   try {
     const users = await scanAll("Users");

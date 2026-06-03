@@ -6,7 +6,7 @@ import {booksTable,bookAuthorsTable,categoriesTable,loansTable,trimValue,scanAll
 
 const router = express.Router();
 
-//Autor: Ramona Buchbinder
+//Autor: Ramona
 router.get("/recommendations/:userId", async (req, res) => {
   const userId = req.params.userId;
 
@@ -40,19 +40,7 @@ router.get("/recommendations/:userId", async (req, res) => {
   }
 });
 
-
-
-// ─── Bücher auflisten ──────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * GET /api/books
- * Gibt alle Bücher zurück, angereichert mit Autoren und Verfügbarkeit.
- * Optionale Filterparameter:
- *   ?search=   → Suche in Titel und Autor (Textfeld)
- *   ?category= → Filter nach categoryId
- *   ?author=   → Filter nach Autorname (Legacy-Feld)
- */
+//Autor: Kjell
 router.get("/", async (req, res) => {
   const { category, search, author } = req.query;
 
@@ -93,15 +81,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ─── Buch anlegen ──────────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * POST /api/books  [Admin-Bereich]
- * Legt ein neues Buch an und verknüpft es mit den angegebenen Autoren
- * über die BookAuthors-Tabelle.
- * Pflichtfelder: title, isbn, year
- */
+//Autor: Kjell
 router.post("/", async (req, res) => {
   const { title, isbn, year, categoryId, authorIds = [], availableCopies = 1, totalCopies } = req.body;
 
@@ -138,14 +118,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ─── Buch bearbeiten ───────────────────────────────────────────────────────
-
-/**
- * Autor: Kjell
- * PUT /api/books/:id  [Admin-Bereich]
- * Aktualisiert Buchdaten und ersetzt die Autoren-Verknüpfungen komplett.
- * Alte BookAuthors-Einträge werden gelöscht, neue werden angelegt.
- */
+//Autor: Kjell
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const { title, isbn, year, categoryId, authorIds = [], availableCopies, totalCopies } = req.body;
@@ -197,13 +170,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// ─── Buch löschen ──────────────────────────────────────────────────────────
+//Autor: Kjell
 
-/**
- * Autor: Kjell
- * DELETE /api/books/:id  [Admin-Bereich]
- * Löscht ein Buch und alle zugehörigen BookAuthors-Einträge.
- */
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 

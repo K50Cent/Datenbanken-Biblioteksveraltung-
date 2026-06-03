@@ -6,7 +6,7 @@ import {booksTable,authorsTable,bookAuthorsTable,loansTable,scanAll,} from "../h
 
 const router = express.Router();
 
-//Autor: Ramona Buchbinder
+//Autor: Ramona
 router.post("/", async (req, res) => {
   const bookId = String(req.body.bookId || "").trim();
   const userId = String(req.body.userId || "").trim();
@@ -45,7 +45,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-//Autor: Ramona Buchbinder
+//Autor: Ramona
 router.get("/", async (req, res) => {
   try {
     const { author, userId } = req.query;
@@ -85,7 +85,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-//Autor: Ramona Buchbinder
+//Autor: Ramonar
 //id, weil es sich um einen bestimmten Datensatz handelt
 router.post("/:id/return", async (req, res) => {
   const { id } = req.params;
