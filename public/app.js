@@ -147,7 +147,6 @@ async function loadBooks() {
   }
 }
 
-
 //Autor: Ramona
 async function loadCategories() {
   try {
@@ -167,8 +166,6 @@ async function loadCategories() {
     console.error("Fehler beim Laden der Kategorien");
   }
 }
-
-
 
 //Autor: Kjell
 function getCategoryName(categoryId) {
@@ -204,54 +201,52 @@ async function loadAuthorsDropdown() {
 //Autor: Ramona
 async function loadAllLoans() {
   const content = document.getElementById("loansContent");
-  const authorQuery = document.getElementById("loansAuthorSearch")?.value.trim() || "";
-  const params = new URLSearchParams();
-  if (CURRENT_USER_ID) params.set("userId", CURRENT_USER_ID);
-  if (authorQuery) params.set("author", authorQuery);
-  const url = `/api/loans?${params.toString()}`;
+  const author = document.getElementById("loansAuthorSearch")?.value.trim() || "";
+
+  let url = `/api/loans?userId=${CURRENT_USER_ID}`;
+  if (author) url += `&author=${author}`;
 
   try {
     const loans = await apiFetch(url);
 
     if (!loans.length) {
-      content.innerHTML = "Derzeit keine aktiven Ausleihen.";
+      content.textContent = "Derzeit keine aktiven Ausleihen.";
       return;
     }
 
     const now = Date.now();
-    let html = "";
-
-    for (let loan of loans) {
-      const due = new Date(loan.dueDate);
-      const overdue = due < now;
-
-      html += `
-        <div class="loan-item${overdue ? " overdue" : ""}">
-          <div>
-            <div class="loan-item-title">
-              ${escHtml(loan.book?.title)}
+    content.innerHTML = `
+      <div class="loans-list">
+        ${loans.map(l => {
+          const overdue = new Date(l.dueDate) < now;
+          return `
+            <div class="loan-item${overdue ? " overdue" : ""}">
+              <div>
+                <div class="loan-item-title">${escHtml(l.book?.title)}</div>
+                <div class="loan-item-due${overdue ? " overdue-text" : ""}">
+                  Fällig: ${formatDate(l.dueDate)}${overdue ? " – ÜBERFÄLLIG" : ""}
+                </div>
+                <div class="loan-item-meta">
+                  Ausgeliehen: ${formatDate(l.borrowedAt)}
+                </div>
+              </div>
+              <div>
+                <button class="btn-sm btn-outline" onclick="returnBook('${l.loanId}')">
+                  Zurückgeben
+                </button>
+              </div>
             </div>
-            <div class="loan-item-due${overdue ? " overdue-text" : ""}">
-              Fällig: ${formatDate(loan.dueDate)}${overdue ? " – ÜBERFÄLLIG" : ""}
-            </div>
-            <div style="font-size:13px;color:#667786">
-              Ausgeliehen: ${formatDate(loan.borrowedAt)}
-            </div>
-          </div>
-          <div>
-            <button class="btn-sm btn-outline" onclick="returnBook('${loan.loanId}')">Zurückgeben</button>
-          </div>
-        </div>
-      `;
-    }
+          `;
+        }).join("")}
+      </div>
+    `;
 
-    content.innerHTML = `<div class="loans-list">${html}</div>`;
-
-  } catch (e) {
-    content.innerHTML = "Ausleihen konnten nicht geladen werden.";
-    console.error(e);
+  } catch (error) {
+    content.textContent = "Ausleihen konnten nicht geladen werden.";
+    console.error(error);
   }
 }
+
 //Autor: Ramona
 async function borrowBook(bookId) {
   try {
@@ -264,7 +259,7 @@ async function borrowBook(bookId) {
     loadAllLoans();
     loadRecommendations();
 
-  } catch (e) {
+  } catch (erorr) {
     showToast("Ausleihe fehlgeschlagen.", "error");
   }
 }
@@ -430,21 +425,12 @@ async function deleteBook(bookId) {
 
 // Autor: Kjell
 searchBtn.onclick = loadBooks;
-
-// Autor: Kjell
 searchInput.onkeydown = (e) => {
   if (e.key === "Enter") loadBooks();
 };
-
-// Autor: Ramona
 document.getElementById("loansSearchBtn").onclick = loadAllLoans;
 
-// Autor: Ramona
-document.getElementById("loansAuthorSearch").onkeydown = (e) => {
-  if (e.key === "Enter") loadAllLoans();
-};
 //Autor: Kjell und Ramona
-
 async function init() {
   await loadCategories();
   await loadAuthorsDropdown();
