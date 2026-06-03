@@ -28,25 +28,21 @@
 </head>
 <body>
 
-<!-- ─── Navigation ────────────────────────────────────────────────────────── -->
 <nav class="navbar">
   <span class="navbar-brand">Bibliotheksverwaltung</span>
 </nav>
 
-<!-- ─── Hauptinhalt ───────────────────────────────────────────────────────── -->
 <div class="container">
 
-  <!-- Sektion 1: Empfehlungen -->
   <section class="page-section" id="recommendationsSection">
     <h2 class="section-title">
-      Empfehlungen – Beliebteste Kategorie <span id="recCategoryName">wird geladen…</span>
+      Empfehlungen – Ihre beliebteste Kategorie <span id="recCategoryName">wird geladen…</span>
     </h2>
     <div id="recBooks" class="books-grid">
       <p style="color:#667786">Empfehlungen werden geladen…</p>
     </div>
   </section>
 
-  <!-- Sektion 2: Bücher durchsuchen -->
   <section class="page-section" id="browseSection">
     <h2 class="section-title">Bücher durchsuchen</h2>
 
@@ -69,7 +65,6 @@
     </div>
   </section>
 
-  <!-- Sektion 3: Aktive Ausleihen -->
   <section class="page-section" id="loansSection">
     <h2 class="section-title">Aktuelle Ausleihen</h2>
 
@@ -86,18 +81,10 @@
     </div>
   </section>
 
-  <!-- ─── Admin-Bereich ───────────────────────── -->
   <section id="adminSection" style="background:#fff; border:1px solid #d8dee4; border-radius:6px; padding:18px; margin-bottom:36px;">
 
     <h2 style="margin-bottom:18px">Admin-Bereich</h2>
 
-    <div class="admin-tabs">
-      <button class="admin-tab-btn active" id="tabBtnBooks"      onclick="activateAdminTab('adminBooks')">Bücher</button>
-      <button class="admin-tab-btn"        id="tabBtnAuthors"    onclick="activateAdminTab('adminAuthors')">Autoren</button>
-      <button class="admin-tab-btn"        id="tabBtnCategories" onclick="activateAdminTab('adminCategories')">Kategorien</button>
-    </div>
-
-    <!-- Tab: Bücher -->
     <div id="adminBooks">
       <h3 id="bookFormTitle">Neues Buch anlegen</h3>
 
@@ -157,65 +144,6 @@
         <p style="color:#667786">Wird geladen…</p>
       </div>
     </div>
-
-    <!-- Tab: Autoren -->
-    <div id="adminAuthors" hidden>
-      <h3 id="authorFormTitle">Neuen Autor anlegen</h3>
-
-      <form id="authorForm">
-        <input type="hidden" id="editAuthorId">
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="authorFirstname">Vorname</label>
-            <input id="authorFirstname" type="text" placeholder="z. B. Johann Wolfgang">
-          </div>
-          <div class="form-group">
-            <label for="authorName">Nachname *</label>
-            <input id="authorName" type="text" required placeholder="z. B. Goethe">
-          </div>
-        </div>
-
-        <div id="authorFormMsg"></div>
-
-        <div class="form-actions" style="margin-top:12px">
-          <button type="submit" id="authorSubmitBtn">Autor speichern</button>
-          <button type="button" id="authorCancelBtn" hidden class="btn-outline">Abbrechen</button>
-        </div>
-      </form>
-
-      <h3 style="margin-top:28px">Alle Autoren</h3>
-      <div id="adminAuthorListContent">
-        <p style="color:#667786">Wird geladen…</p>
-      </div>
-    </div>
-
-    <!-- Tab: Kategorien -->
-    <div id="adminCategories" hidden>
-      <h3 id="categoryFormTitle">Neue Kategorie anlegen</h3>
-
-      <form id="categoryForm">
-        <input type="hidden" id="editCategoryId">
-
-        <div class="form-group">
-          <label for="categoryName">Name *</label>
-          <input id="categoryName" type="text" required placeholder="z. B. Roman">
-        </div>
-
-        <div id="categoryFormMsg"></div>
-
-        <div class="form-actions" style="margin-top:12px">
-          <button type="submit" id="categorySubmitBtn">Kategorie speichern</button>
-          <button type="button" id="categoryCancelBtn" hidden class="btn-outline">Abbrechen</button>
-        </div>
-      </form>
-
-      <h3 style="margin-top:28px">Alle Kategorien</h3>
-      <div id="adminCategoryListContent">
-        <p style="color:#667786">Wird geladen…</p>
-      </div>
-    </div>
-
   </section>
 
 </div>
