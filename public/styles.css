@@ -10,41 +10,42 @@ body {
   background: #eef2f5;
 }
 
-h1,
-h2,
-h3 {
-  margin: 0 0 10px;
+/* Layout */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-p {
-  margin: 0 0 14px;
-  color: #52616f;
+.page-section {
+  margin-bottom: 36px;
 }
 
-a {
-  color: #1d5f46;
-  text-decoration: none;
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #237a57;
+  color: #1f2933;
 }
 
-a:hover {
-  text-decoration: underline;
+/* Navbar */
+.navbar {
+  min-height: 58px;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  background: #1f2933;
+  color: #ffffff;
 }
 
-[hidden] {
-  display: none !important;
+.navbar-brand {
+  font-weight: 700;
+  font-size: 18px;
 }
 
-.card,
-.search-bar,
-.empty-state,
-.loan-item,
-.table-wrapper,
-.loan-count-info {
-  background: #ffffff;
-  border: 1px solid #d8dee4;
-  border-radius: 6px;
-}
-
+/* Formulare */
 .form-group {
   margin-bottom: 14px;
 }
@@ -57,8 +58,7 @@ label {
 }
 
 input,
-select,
-textarea {
+select {
   width: 100%;
   min-height: 40px;
   padding: 8px 10px;
@@ -73,8 +73,7 @@ select[multiple] {
 }
 
 input:focus,
-select:focus,
-textarea:focus {
+select:focus {
   outline: 2px solid #a6d8c2;
   border-color: #237a57;
 }
@@ -85,20 +84,13 @@ textarea:focus {
   gap: 12px;
 }
 
-.form-actions,
-.td-actions {
+.form-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-small {
-  display: block;
-  margin-top: 4px;
-  color: #667786;
-}
-
-.btn,
+/* Buttons */
 button {
   display: inline-flex;
   align-items: center;
@@ -109,31 +101,17 @@ button {
   border-radius: 4px;
   background: #237a57;
   color: #ffffff;
-  font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
-.btn:hover,
 button:hover {
-  text-decoration: none;
   background: #1d5f46;
 }
 
-.btn:disabled,
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.btn-full {
-  width: 100%;
-}
-
-.btn-sm {
-  min-height: 32px;
-  padding: 5px 10px;
-  font-size: 13px;
 }
 
 .btn-outline {
@@ -145,36 +123,13 @@ button:disabled {
   background: #e8f4ef;
 }
 
-.btn-danger {
-  border-color: #a92323;
-  background: #a92323;
+.btn-sm {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 13px;
 }
 
-.btn-danger:hover {
-  background: #7f1d1d;
-}
-
-.message {
-  padding: 10px 12px;
-  border-radius: 4px;
-  margin-top: 12px;
-}
-
-.message-success {
-  background: #e8f4ef;
-  color: #1d5f46;
-}
-
-.message-error {
-  background: #fdecec;
-  color: #a92323;
-}
-
-.message-info {
-  background: #edf4ff;
-  color: #244b78;
-}
-
+/* Toast */
 #toastContainer {
   position: fixed;
   right: 20px;
@@ -183,119 +138,7 @@ button:disabled {
   z-index: 20;
 }
 
-.navbar {
-  min-height: 58px;
-  padding: 10px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: #1f2933;
-  color: #ffffff;
-}
-
-.navbar-brand {
-  flex: 1;
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.navbar-user,
-.navbar-links {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.navbar a,
-.navbar .btn-outline {
-  color: #ffffff;
-  border-color: #ffffff;
-  background: transparent;
-}
-
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid #cfd7df;
-}
-
-.tab-btn {
-  border: 0;
-  border-radius: 4px 4px 0 0;
-  background: transparent;
-  color: #1f2933;
-}
-
-.tab-btn.active {
-  background: #237a57;
-  color: #ffffff;
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-.badge,
-.avail-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.badge {
-  background: #ffffff;
-  color: #237a57;
-}
-
-.avail-badge.available {
-  background: #e8f4ef;
-  color: #1d5f46;
-}
-
-.avail-badge.unavailable {
-  background: #fdecec;
-  color: #a92323;
-}
-
-.search-bar,
-.loan-toolbar {
-  display: flex;
-  gap: 12px;
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  padding: 14px;
-}
-
-.search-bar .form-group {
-  flex: 1;
-  min-width: 180px;
-  margin-bottom: 0;
-}
-
-.loan-toolbar {
-  background: #ffffff;
-  border: 1px solid #d8dee4;
-  border-radius: 6px;
-}
-
-.loan-toolbar select {
-  max-width: 220px;
-}
-
+/* Bücher-Grid */
 .books-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -314,32 +157,25 @@ button:disabled {
   margin-bottom: 8px;
 }
 
-.book-card-meta {
-  color: #52616f;
-  line-height: 1.6;
-}
-
 .book-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid #e1e7ec;
 }
 
-.empty-state {
-  padding: 28px;
-  text-align: center;
-}
-
+/* Ausleihen */
 .loans-list {
   display: grid;
   gap: 12px;
 }
 
 .loan-item {
+  background: #ffffff;
+  border: 1px solid #d8dee4;
+  border-radius: 6px;
   padding: 14px;
   display: flex;
   justify-content: space-between;
@@ -363,40 +199,28 @@ button:disabled {
   font-weight: 700;
 }
 
-.loan-count-info {
-  padding: 12px;
-  margin-bottom: 14px;
+/* Suche */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d8dee4;
+  border-radius: 6px;
 }
 
-.card {
-  padding: 20px;
-  margin-bottom: 20px;
+.search-bar .form-group {
+  flex: 1;
+  min-width: 180px;
+  margin-bottom: 0;
 }
 
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 10px;
-  border-bottom: 1px solid #e1e7ec;
-  text-align: left;
-  vertical-align: top;
-}
-
-th {
-  background: #f5f7f9;
-}
-
+/* Responsive */
 @media (max-width: 700px) {
   .navbar,
-  .navbar-user,
   .form-actions,
   .book-card-footer,
   .loan-item {
@@ -412,13 +236,8 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .btn,
   button {
     width: 100%;
     margin-top: 8px;
-  }
-
-  .tabs {
-    overflow-x: auto;
   }
 }

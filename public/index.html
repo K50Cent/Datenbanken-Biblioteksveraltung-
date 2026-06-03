@@ -5,26 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bibliotheksverwaltung</title>
   <link rel="stylesheet" href="styles.css">
-  <style>
-    .page-section {
-      margin-bottom: 36px;
-    }
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #237a57;
-      color: #1f2933;
-    }
-    .section-title span {
-      color: #237a57;
-    }
-    .admin-tabs { display:flex; gap:0; margin-bottom:24px; border-bottom:2px solid #e1e4e8; }
-    .admin-tab-btn { padding:8px 18px; border:none; background:none; cursor:pointer; font-size:14px; color:#586069; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .15s; }
-    .admin-tab-btn:hover { color:#237a57; }
-    .admin-tab-btn.active { color:#237a57; border-bottom-color:#237a57; font-weight:600; }
-  </style>
 </head>
 <body>
 
@@ -39,7 +19,7 @@
       Empfehlungen – Ihre beliebteste Kategorie <span id="recCategoryName">wird geladen…</span>
     </h2>
     <div id="recBooks" class="books-grid">
-      <p style="color:#667786">Empfehlungen werden geladen…</p>
+
     </div>
   </section>
 
@@ -61,7 +41,7 @@
     </div>
 
     <div id="booksList" class="books-grid">
-      <p style="color:#667786">Bücher werden geladen…</p>
+      
     </div>
   </section>
 
@@ -71,19 +51,19 @@
     <div class="search-bar">
       <div class="form-group">
         <label for="loansAuthorSearch">Nach Autor suchen</label>
-        <input id="loansAuthorSearch" type="text" placeholder="Vor- oder Nachname…">
+        <input id="loansAuthorSearch" type="text">
       </div>
       <button id="loansSearchBtn">Suchen</button>
     </div>
 
     <div id="loansContent">
-      <p style="color:#667786">Ausleihen werden geladen…</p>
+      
     </div>
   </section>
 
-  <section id="adminSection" style="background:#fff; border:1px solid #d8dee4; border-radius:6px; padding:18px; margin-bottom:36px;">
+  <section id="adminSection">
 
-    <h2 style="margin-bottom:18px">Admin-Bereich</h2>
+    <h2>Admin-Bereich</h2>
 
     <div id="adminBooks">
       <h3 id="bookFormTitle">Neues Buch anlegen</h3>
@@ -141,14 +121,13 @@
 
       <h3 style="margin-top:28px">Alle Bücher</h3>
       <div id="adminBookListContent">
-        <p style="color:#667786">Wird geladen…</p>
+        
       </div>
     </div>
   </section>
 
 </div>
 
-<!-- Toast-Container -->
 <div id="toastContainer"></div>
 
 <script src="app.js"></script>
